@@ -85,10 +85,23 @@ class ChatSession:
     def start(self):
         print("\033[1;36mECNU Chat Client (Enter 'exit' to quit)\033[0m")
         print(f"\n\033[1;36mUsing model: {self.model} (Temperature: {self.temperature})\033[0m")
+        print("\033[1;36mTip: Paste multi-line text and press Ctrl+D (or Ctrl+Z on Windows) to submit\033[0m")
         
         while True:
             try:
-                user_input = input(f"\n\033[1;{self.user_color}mUser: \033[0m\n").strip()
+                # 多行输入提示
+                print(f"\n\033[1;{self.user_color}mUser: (Paste text then press Ctrl+D/Ctrl+Z to submit)\033[0m")
+
+                # 读取所有输入行直到EOF
+                lines = []
+                while True:
+                    try:
+                        line = input()
+                    except EOFError:
+                        break  # 捕获Ctrl+D/Ctrl+Z
+                    lines.append(line)
+
+                user_input = "\n".join(lines).strip()
                 
                 if user_input.lower() in ['exit', 'quit']:
                     print("\033[1;33m\nExit ...\033[0m")
@@ -154,6 +167,18 @@ if __name__ == "__main__":
     if args.temperature is None:
         args.temperature = 0.6 if args.model == 'r1' else 0.3
 
+        # 初始化客户端和会话
+    client = OpenAI(
+        api_key=os.getenv("CHATECNU_API_KEY"),
+        base_url="https://chat.ecnu.edu.cn/open/api/v1",
+    )
+
+    session = ChatSession(
+        model=args.model,
+        temperature=args.temperature,
+        system_prompt=system_prompt
+    )
+
     # 处理文件上传
     if args.file:
         try:
@@ -166,17 +191,5 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"\033[1;31mError reading file: {str(e)}\033[0m")
             exit(1)
-
-    # 初始化客户端和会话
-    client = OpenAI(
-        api_key=os.getenv("CHATECNU_API_KEY"),
-        base_url="https://chat.ecnu.edu.cn/open/api/v1",
-    )
-
-    session = ChatSession(
-        model=args.model,
-        temperature=args.temperature,
-        system_prompt=system_prompt
-    )
 
     session.start()
