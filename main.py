@@ -18,7 +18,9 @@ load_dotenv(dotenv_path=env_path)
 class ChatSession:
     def __init__(self, model, temperature, system_prompt, max_history=None):
         self.user_color = "32"  # 绿色
+        self.program_color = "36"  # 青色
         self.assistant_color = "34"  # 蓝色
+        self.reasoning_color = "33"  # 黄色
         self.model = self._get_model_name(model)  # 转换为实际模型名称
         self.temperature = temperature  # 使用传入的温度参数
         self.system_prompt = system_prompt
@@ -59,14 +61,32 @@ class ChatSession:
             )
 
             full_response = []
-            print(f"\n\033[1;{self.assistant_color}mAssistant: \033[0m\n", end="", flush=True)
+            print(f"\n\033[1;{self.assistant_color}mAssistant: \033[0m\n", flush=True)
+
+            # 添加推理过程标识
+            reasoning_started = False
+
             for chunk in stream:
                 if "reasoner" in self.model and chunk.choices[0].delta.reasoning_content:
                     reasoning_content = chunk.choices[0].delta.reasoning_content
+
+                    # 首次出现思考内容时添加前缀和分隔线
+                    if not reasoning_started:
+                        print(f"\033[1;{self.assistant_color}m{'='*30} Think {'='*30}\033[0m", flush=True)
+                        print(f"\033[1;{self.reasoning_color}m", end="", flush=True)
+                        reasoning_started = True
+
                     print(reasoning_content, end="", flush=True)
 
                 if chunk.choices[0].delta.content:
                     content = chunk.choices[0].delta.content
+
+                    # 在思考结束后添加分隔线
+                    if reasoning_started:
+                        print("\033[0m")  # 结束思考颜色
+                        print(f"\033[1;{self.assistant_color}m{'='*30} Answer {'='*30}\033[0m")
+                        reasoning_started = False
+
                     print(content, end="", flush=True)
                     full_response.append(content)
             print()
@@ -83,14 +103,14 @@ class ChatSession:
             return False
 
     def start(self):
-        print("\033[1;36mECNU Chat Client (Enter 'exit' to quit)\033[0m")
-        print(f"\n\033[1;36mUsing model: {self.model} (Temperature: {self.temperature})\033[0m")
-        print("\033[1;36mTip: Paste multi-line text and press Ctrl+D (or Ctrl+Z on Windows) to submit\033[0m")
+        print(f"\033[1;{self.program_color}mECNU Chat Client (Enter 'exit' to quit)\033[0m\n")
+        print(f"\033[1;{self.program_color}mUsing model: {self.model} (Temperature: {self.temperature})\033[0m")
+        print(f"\033[1;{self.program_color}mTip: Paste multi-line text and press Ctrl+D (or Ctrl+Z on Windows) to submit\033[0m")
         
         while True:
             try:
                 # 多行输入提示
-                print(f"\n\033[1;{self.user_color}mUser: (Paste text then press Ctrl+D/Ctrl+Z to submit)\033[0m")
+                print(f"\n\033[1;{self.user_color}mUser: (Input text then press Ctrl+D to submit)\033[0m\n")
 
                 # 读取所有输入行直到EOF
                 lines = []
@@ -104,7 +124,7 @@ class ChatSession:
                 user_input = "\n".join(lines).strip()
                 
                 if user_input.lower() in ['exit', 'quit']:
-                    print("\033[1;33m\nExit ...\033[0m")
+                    print(f"\033[1;{self.program_color}mExit ...\033[0m")
                     break
                 if not user_input:
                     continue
@@ -114,7 +134,7 @@ class ChatSession:
                     break
 
             except KeyboardInterrupt:
-                print("\n\033[1;33m\nSession terminated by user.\033[0m")
+                print(f"\033[1;{self.program_color}mSession terminated by user.\033[0m")
                 break
 
 def load_prompt_file(model_flag, custom_path=None):
