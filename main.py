@@ -135,7 +135,7 @@ def load_prompt_file(model_flag, custom_path=None):
 
 if __name__ == "__main__":
     # 配置命令行参数解析
-    parser = argparse.ArgumentParser(description="A CLI client for interacting with DeepSeek's AI chat models.")
+    parser = argparse.ArgumentParser(description="A CLI client for interacting with ECNU's AI chat models.")
     parser.add_argument('-m', '--model',
                       default='v3',
                       choices=['v3', 'r1'],
