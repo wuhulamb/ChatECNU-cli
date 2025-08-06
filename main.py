@@ -65,14 +65,14 @@ class ChatSession:
             full_response = []
             print(f"\n\033[1;{self.assistant_color}mAssistant: \033[0m\n", flush=True)
 
-            # 添加推理过程标识
+            # Add reasoning process identifier
             reasoning_started = False
 
             for chunk in stream:
                 if "reasoner" in self.model and chunk.choices[0].delta.reasoning_content:
                     reasoning_content = chunk.choices[0].delta.reasoning_content
 
-                    # 首次出现思考内容时添加前缀和分隔线
+                    # Add prefix and separator when reasoning content first appears
                     if not reasoning_started:
                         print(f"\033[1;{self.assistant_color}m{'='*30} Think {'='*30}\033[0m", flush=True)
                         print(f"\033[1;{self.reasoning_color}m", end="", flush=True)
@@ -83,9 +83,9 @@ class ChatSession:
                 if chunk.choices[0].delta.content:
                     content = chunk.choices[0].delta.content
 
-                    # 在思考结束后添加分隔线
+                    # Add separator after reasoning
                     if reasoning_started:
-                        print("\033[0m")  # 结束思考颜色
+                        print("\033[0m")  # End reasoning color
                         print(f"\033[1;{self.assistant_color}m{'='*30} Answer {'='*30}\033[0m")
                         reasoning_started = False
 
