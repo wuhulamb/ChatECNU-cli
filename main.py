@@ -102,11 +102,31 @@ class ChatSession:
             print(f"\n\033[1;31m\nError occurred: {str(e)}\033[0m")
             return False
 
-    def start(self):
+    def add_file_content(self, file_path):
+        """添加文件内容到对话上下文"""
+        try:
+            with open(file_path, 'r') as f:
+                file_content = f.read()
+
+            # 添加系统消息说明文件内容
+            self.messages.append({
+                "role": "system",
+                "content": f"User has uploaded a file '{os.path.basename(file_path)}'. Here is its content:\n{file_content}"
+            })
+
+            return True
+        except Exception as e:
+            print(f"\033[1;31mError reading file: {str(e)}\033[0m")
+            return False
+
+    def start(self, initial_file=None):
         print(f"\033[1;{self.program_color}mECNU Chat Client (Enter 'exit' to quit)\033[0m\n")
         print(f"\033[1;{self.program_color}mUsing model: {self.model} (Temperature: {self.temperature})\033[0m")
         print(f"\033[1;{self.program_color}mTip: Paste multi-line text and press Ctrl+D (or Ctrl+Z on Windows) to submit\033[0m")
-        
+
+        if initial_file:
+            print(f"\033[1;33mFile content has been loaded. You can now ask questions about it.\033[0m")
+
         while True:
             try:
                 # 多行输入提示
@@ -199,17 +219,8 @@ if __name__ == "__main__":
         system_prompt=system_prompt
     )
 
-    # 处理文件上传
     if args.file:
-        try:
-            with open(args.file, 'r') as f:
-                file_content = f.read()
-            print(f"\033[1;32m\nUploaded file content from {args.file}:\033[0m")
-            print(file_content)
-            session.add_user_message(f"Here is the content of my file:\n{file_content}")
-            session.generate_assistant_response()
-        except Exception as e:
-            print(f"\033[1;31mError reading file: {str(e)}\033[0m")
+        if not session.add_file_content(args.file):
             exit(1)
 
-    session.start()
+    session.start(initial_file=args.file)
