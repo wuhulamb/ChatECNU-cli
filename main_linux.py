@@ -1,4 +1,4 @@
-#!/home/xu/python/code/bin/python
+#!/usr/bin/env python
 import os
 import readline
 import argparse
