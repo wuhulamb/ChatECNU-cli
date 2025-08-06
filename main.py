@@ -5,36 +5,37 @@ import argparse
 from openai import OpenAI
 from dotenv import load_dotenv
 
-# 获取当前脚本的绝对路径（如果是符号链接，解析真实路径）
+# Get absolute path of current script (resolving symlinks)
 script_path = os.path.realpath(__file__)
 script_dir = os.path.dirname(script_path)
 
-# 拼接 .env 文件的路径
+# Construct path to .env file
 env_path = os.path.join(script_dir, ".env")
 
-# 显式加载指定路径的 .env
-load_dotenv(dotenv_path=env_path)
+# Explicitly load .env from specified path
+try:
+    load_dotenv(dotenv_path=env_path)
+except Exception as e:
+    print(f"\033[1;31m[CRITICAL] Failed to load .env file: {str(e)}\033[0m")
+    exit(1)
 
 class ChatSession:
     def __init__(self, model, temperature, system_prompt, max_history=None):
-        self.user_color = "32"  # 绿色
-        self.program_color = "36"  # 青色
-        self.assistant_color = "34"  # 蓝色
-        self.reasoning_color = "33"  # 黄色
-        self.model = self._get_model_name(model)  # 转换为实际模型名称
-        self.temperature = temperature  # 使用传入的温度参数
+        self.user_color = "32"  # Green
+        self.program_color = "36"  # Cyan
+        self.assistant_color = "34"  # Blue
+        self.reasoning_color = "33"  # Yellow
+        self.model = self._get_model_name(model)
+        self.temperature = temperature
         self.system_prompt = system_prompt
-        # 根据模型类型设置历史记录长度
         if max_history is None:
             self.max_history = 10 if "reasoner" in self.model else 15
         else:
             self.max_history = max_history
-        self.messages = [
-            {"role": "system", "content": self.system_prompt}
-        ]
+        self.messages = [{"role": "system", "content": self.system_prompt}]
 
     def _get_model_name(self, model_flag):
-        """将参数转换为实际模型名称"""
+        """Convert flag to actual model name"""
         model_mapping = {
             "r1": "ecnu-reasoner",
             "v3": "ecnu-max"
@@ -42,16 +43,17 @@ class ChatSession:
         return model_mapping.get(model_flag, "ecnu-max")
 
     def _trim_history(self):
-        # ... 保持原有修剪逻辑不变 ...
         if len(self.messages) > self.max_history * 2 + 1:
             self.messages = [self.messages[0]] + self.messages[-self.max_history * 2:]
 
     def add_user_message(self, content):
-        """添加用户消息到对话历史"""
+        """Add user message to conversation history"""
+        if not content or not isinstance(content, str):
+            raise ValueError("Message content must be non-empty string")
         self.messages.append({"role": "user", "content": content})
 
     def generate_assistant_response(self):
-        """生成助手响应并处理流式输出"""
+        """Generate assistant response with streaming output"""
         try:
             stream = client.chat.completions.create(
                 model=self.model,
@@ -91,76 +93,104 @@ class ChatSession:
                     full_response.append(content)
             print()
 
-            self.messages.append({
-                "role": "assistant",
-                "content": "".join(full_response)
-            })
 
+            self.messages.append({"role": "assistant", "content": "".join(full_response)})
             self._trim_history()
             return True
+
+        except ConnectionError as e:
+            print(f"\n\033[1;31m[NETWORK] Connection failed: {str(e)}\033[0m")
+            return False
+        except TimeoutError as e:
+            print(f"\n\033[1;31m[TIMEOUT] Request timed out: {str(e)}\033[0m")
+            return False
         except Exception as e:
-            print(f"\n\033[1;31m\nError occurred: {str(e)}\033[0m")
+            print(f"\n\033[1;31m[API] Error occurred: {str(e)}\033[0m")
             return False
 
     def add_file_content(self, file_path):
-        """添加文件内容到对话上下文"""
+        """Add file content to conversation context"""
+        if not os.path.exists(file_path):
+            print(f"\033[1;31m[FILE] File not found: {file_path}\033[0m")
+            return False
+
         try:
-            with open(file_path, 'r') as f:
+            file_size = os.path.getsize(file_path)
+            if file_size > 10 * 1024 * 1024:
+                print(f"\033[1;31m[FILE] File too large (>10MB): {file_path}\033[0m")
+                return False
+
+            with open(file_path, 'r', encoding='utf-8') as f:
                 file_content = f.read()
 
-            # 添加系统消息说明文件内容
+            if not file_content.strip():
+                print(f"\033[1;33m[WARNING] Empty file: {file_path}\033[0m")
+                return False
+
             self.messages.append({
                 "role": "system",
                 "content": f"User has uploaded a file '{os.path.basename(file_path)}'. Here is its content:\n{file_content}"
             })
-
             return True
+
+        except UnicodeDecodeError:
+            print(f"\033[1;31m[FILE] Not a UTF-8 encoded file: {file_path}\033[0m")
+            return False
+        except PermissionError:
+            print(f"\033[1;31m[FILE] Permission denied: {file_path}\033[0m")
+            return False
         except Exception as e:
-            print(f"\033[1;31mError reading file: {str(e)}\033[0m")
+            print(f"\033[1;31m[FILE] Error reading file: {str(e)}\033[0m")
             return False
 
     def start(self, initial_file=None):
-        print(f"\033[1;{self.program_color}mECNU Chat Client (Enter 'exit' to quit)\033[0m\n")
+        print(f"\033[1;{self.program_color}mECNU Chat Client (Type 'exit' to quit)\033[0m\n")
         print(f"\033[1;{self.program_color}mUsing model: {self.model} (Temperature: {self.temperature})\033[0m")
-        print(f"\033[1;{self.program_color}mTip: Paste multi-line text and press Ctrl+D (or Ctrl+Z on Windows) to submit\033[0m")
+        print(f"\033[1;{self.program_color}mTip: Paste multi-line text and press Ctrl+D to submit\033[0m")
 
         if initial_file:
             print(f"\033[1;33mFile content has been loaded. You can now ask questions about it.\033[0m")
 
         while True:
             try:
-                # 多行输入提示
                 print(f"\n\033[1;{self.user_color}mUser: (Input text then press Ctrl+D to submit)\033[0m\n")
 
-                # 读取所有输入行直到EOF
                 lines = []
                 while True:
                     try:
                         line = input()
                     except EOFError:
-                        break  # 捕获Ctrl+D/Ctrl+Z
+                        break
+                    except KeyboardInterrupt:
+                        print(f"\033[1;{self.program_color}mSession terminated by Ctrl+C\033[0m")
+                        return
                     lines.append(line)
 
                 user_input = "\n".join(lines).strip()
                 
                 if user_input.lower() in ['exit', 'quit']:
-                    print(f"\033[1;{self.program_color}mExit ...\033[0m")
+                    print(f"\033[1;{self.program_color}mExiting...\033[0m")
                     break
                 if not user_input:
                     continue
 
-                self.add_user_message(user_input)
-                if not self.generate_assistant_response():
-                    break
+                try:
+                    self.add_user_message(user_input)
+                    if not self.generate_assistant_response():
+                        print("\033[1;31m[ERROR] Conversation error, please try again\033[0m")
+                except ValueError as e:
+                    print(f"\033[1;31m[INPUT] {str(e)}\033[0m")
 
             except KeyboardInterrupt:
-                print(f"\033[1;{self.program_color}mSession terminated by user.\033[0m")
+                print(f"\033[1;{self.program_color}mSession terminated by Ctrl+C\033[0m")
+                break
+            except Exception as e:
+                print(f"\033[1;31m[FATAL] Unexpected error: {str(e)}\033[0m")
                 break
 
 def load_prompt_file(model_flag, custom_path=None):
-    """加载提示词文件"""
+    """Load prompt file"""
     if custom_path:
-        # 如果提供了自定义路径，将其转换为绝对路径
         if not os.path.isabs(custom_path):
             custom_path = os.path.join(os.getcwd(), custom_path)
         if not os.path.exists(custom_path):
@@ -170,48 +200,52 @@ def load_prompt_file(model_flag, custom_path=None):
         default_file = "deepseek-r1.md" if model_flag == "r1" else "deepseek-v3.md"
         prompt_path = os.path.join(script_dir, default_file)
 
-    with open(prompt_path, "r") as f:
-        return f.read()
+    try:
+        with open(prompt_path, "r", encoding='utf-8') as f:
+            content = f.read()
+            if not content.strip():
+                raise ValueError("Prompt file is empty")
+            return content
+    except Exception as e:
+        print(f"\033[1;31m[LOAD] Failed to load prompt: {str(e)}\033[0m")
+        raise
 
 if __name__ == "__main__":
-    # 配置命令行参数解析
     parser = argparse.ArgumentParser(description="A CLI client for interacting with ECNU's AI chat models.")
-    parser.add_argument('-m', '--model',
-                      default='v3',
-                      choices=['v3', 'r1'],
-                      help="模型选择：v3=ecnu-max (default), r1=ecnu-reasoner")
-    # 提示文件参数
-    parser.add_argument('-p', '--prompt-file',
-                      default=None,
-                      help="自定义系统提示词文件路径（未指定时使用模型默认）")
-    parser.add_argument('-t', '--temperature',
-                      type=float,
-                      default=None,
-                      help="温度参数：(默认: v3=0.3, r1=0.6)")
-
-    # 添加文件参数
-    parser.add_argument('-f', '--file',
-                      default=None,
-                      help="Path to a text file to upload as initial context")
+    parser.add_argument('-m', '--model', default='v3', choices=['v3', 'r1'],
+                      help="Model selection: v3=ecnu-max (default), r1=ecnu-reasoner")
+    parser.add_argument('-p', '--prompt-file', default=None,
+                      help="Custom system prompt file path")
+    parser.add_argument('-t', '--temperature', type=float, default=None,
+                      help="Temperature parameter (default: v3=0.3, r1=0.6)")
+    parser.add_argument('-f', '--file', default=None,
+                      help="Path to text file to upload as initial context")
 
     args = parser.parse_args()
 
-    # 加载提示词内容
-    try:
-        system_prompt = load_prompt_file(args.model, args.prompt_file)
-    except FileNotFoundError as e:
-        print(f"\033[1;31mError: {str(e)}\033[0m")
+    if args.temperature is not None and not (0 <= args.temperature <= 2):
+        print("\033[1;31m[ARG] Temperature must be between 0 and 2\033[0m")
         exit(1)
 
-    # 设置默认温度值
+    try:
+        system_prompt = load_prompt_file(args.model, args.prompt_file)
+    except Exception as e:
+        print(f"\033[1;31m[STARTUP] {str(e)}\033[0m")
+        exit(1)
+
     if args.temperature is None:
         args.temperature = 0.6 if args.model == 'r1' else 0.3
 
-        # 初始化客户端和会话
-    client = OpenAI(
-        api_key=os.getenv("CHATECNU_API_KEY"),
-        base_url="https://chat.ecnu.edu.cn/open/api/v1",
-    )
+    try:
+        client = OpenAI(
+            api_key=os.getenv("CHATECNU_API_KEY"),
+            base_url="https://chat.ecnu.edu.cn/open/api/v1",
+        )
+        if not client.api_key:
+            raise ValueError("API key not configured")
+    except Exception as e:
+        print(f"\033[1;31m[INIT] {str(e)}\033[0m")
+        exit(1)
 
     session = ChatSession(
         model=args.model,
@@ -219,8 +253,7 @@ if __name__ == "__main__":
         system_prompt=system_prompt
     )
 
-    if args.file:
-        if not session.add_file_content(args.file):
-            exit(1)
+    if args.file and not session.add_file_content(args.file):
+        exit(1)
 
     session.start(initial_file=args.file)
