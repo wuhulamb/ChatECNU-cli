@@ -17,7 +17,7 @@ ECNU Chat Client 是一个命令行交互工具，用于与华东师范大学的
 
 ### 1. 环境要求
 
-- Python 3.6+
+- Python 3.7+
 - 安装依赖包：
   ```
   pip install openai python-dotenv
@@ -52,6 +52,10 @@ python main.py [选项]
 | `-t`, `--temperature` | 设置温度参数(0-2) | `v3`:0.3, `r1`:0.6 |
 | `-f`, `--file` | 上传文本文件作为初始上下文 | 无 |
 | `-p`, `--prompt-file` | 自定义系统提示文件 | 默认提示文件 |
+
+### 发送文字
+
+为了能~~复制粘贴~~输入多行文本，将发送键从回车改成了输入`EOF`（文件结束符）。输入文字后，需要先换到空行，再输入`EOF`。Unix/Linux按`Ctrl+D`直接提交，Windows按`Ctrl+Z`需要再按Enter提交。
 
 ### 使用示例
 
