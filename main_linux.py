@@ -115,11 +115,6 @@ class ChatSession:
             return False
 
         try:
-            file_size = os.path.getsize(file_path)
-            if file_size > 10 * 1024 * 1024:
-                print(f"\033[1;31m[FILE] File too large (>10MB): {file_path}\033[0m")
-                return False
-
             with open(file_path, 'r', encoding='utf-8') as f:
                 file_content = f.read()
 
@@ -197,7 +192,7 @@ def load_prompt_file(model_flag, custom_path=None):
             raise FileNotFoundError(f"Prompt file not found: {custom_path}")
         prompt_path = custom_path
     else:
-        default_file = "deepseek-r1.md" if model_flag == "r1" else "deepseek-v3.md"
+        default_file = "ecnu-r1.md" if model_flag == "r1" else "ecnu-v3.md"
         prompt_path = os.path.join(script_dir, default_file)
 
     try:
