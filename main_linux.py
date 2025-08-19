@@ -2,6 +2,7 @@
 import os
 import readline
 import argparse
+import base64
 from openai import OpenAI
 from dotenv import load_dotenv
 
@@ -20,15 +21,17 @@ except Exception as e:
     exit(1)
 
 class ChatSession:
-    def __init__(self, model, temperature, system_prompt, max_history=None, file_paths=None):
+    def __init__(self, model, temperature, system_prompt, max_history=None, file_paths=None, image_paths=None):
+        if image_paths:
+            model = "vl"        # Use vision model if images provided
         self.user_color = "32"  # Green
         self.program_color = "36"  # Cyan
         self.assistant_color = "34"  # Blue
         self.reasoning_color = "33"  # Yellow
         self.model = self._get_model_name(model)
-        self.temperature = temperature
         self.system_prompt = self._get_system_prompt(system_prompt)
         self.file_paths = file_paths
+        self.image_paths = image_paths
 
         if temperature:
             self.temperature = temperature
@@ -42,27 +45,32 @@ class ChatSession:
 
         self.messages = [{"role": "system", "content": self.system_prompt}]
 
-        # Handle files if provided
+        # Process files and images
         if file_paths and not self.add_file_contents(file_paths):
             raise ValueError("Failed to process one or more files")
+        if image_paths and not self.add_image_contents(image_paths):
+            raise ValueError("Failed to process one or more images")
 
     def _get_model_name(self, model_flag):
-        """Convert flag to actual model name"""
+        """Map model flag to actual model name"""
         model_mapping = {
             "r1": "ecnu-reasoner",
             "v3": "ecnu-max",
+            "vl": "ecnu-vl",
         }
         return model_mapping.get(model_flag, "ecnu-max")
 
     def _get_model_temp(self, model_flag):
-        """Get model's default temperature"""
+        """Get default temperature for model"""
         model_mapping = {
             "r1": 0.6,
             "v3": 0.3,
+            "vl": 0.01,
         }
         return model_mapping.get(model_flag, 0.3)
 
     def _get_system_prompt(self, system_prompt):
+        """Load system prompt from file"""
         if system_prompt:
             if not os.path.exists(system_prompt):
                 raise FileNotFoundError(f"Prompt file not found: {system_prompt}")
@@ -132,7 +140,6 @@ class ChatSession:
                     full_response.append(content)
             print()
 
-
             self.messages.append({"role": "assistant", "content": "".join(full_response)})
             self._trim_history()
             return True
@@ -163,7 +170,7 @@ class ChatSession:
                     continue
 
                 self.messages.append({
-                    "role": "system",
+                    "role": "user",
                     "content": f"User has uploaded a file '{os.path.basename(file_path)}'. Here is its content:\n{file_content}"
                 })
             except UnicodeDecodeError:
@@ -178,6 +185,38 @@ class ChatSession:
 
         return True
 
+    def add_image_contents(self, image_paths):
+        """Add multiple image contents to conversation context"""
+        for image_path in image_paths:
+            if not os.path.exists(image_path):
+                print(f"\033[1;31m[IMAGE] File not found: {image_path}\033[0m")
+                return False
+
+            try:
+                with open(image_path, "rb") as image_file:
+                    base64_image = base64.b64encode(image_file.read()).decode('utf-8')
+
+                self.messages.append({
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": f"User has uploaded an image '{os.path.basename(image_path)}', please remember its content."},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{base64_image}"
+                            }
+                        }
+                    ]
+                })
+
+            except PermissionError:
+                print(f"\033[1;31m[IMAGE] Permission denied: {image_path}\033[0m")
+                return False
+            except Exception as e:
+                print(f"\033[1;31m[IMAGE] Error processing image {image_path}: {str(e)}\033[0m")
+                return False
+
+        return True
 
     def start(self):
         print(f"\033[1;{self.program_color}mECNU Chat Client (Type 'exit' to quit)\033[0m\n")
@@ -186,6 +225,8 @@ class ChatSession:
 
         if self.file_paths:
             print(f"\033[1;33m{len(self.file_paths)} file(s) have been loaded. You can now ask questions about them.\033[0m")
+        if self.image_paths:
+            print(f"\033[1;33m{len(self.image_paths)} image(s) have been loaded. You can now ask questions about them.\033[0m")
 
         while True:
             try:
@@ -203,7 +244,7 @@ class ChatSession:
                     lines.append(line)
 
                 user_input = "\n".join(lines).strip()
-                
+
                 if user_input.lower() in ['exit', 'quit']:
                     print(f"\033[1;{self.program_color}mExiting...\033[0m")
                     break
@@ -234,7 +275,8 @@ if __name__ == "__main__":
                       help="Temperature parameter (default: v3=0.3, r1=0.6)")
     parser.add_argument('-f', '--files', default=None, nargs='+',
                       help="Paths to text files to upload as initial context (multiple files allowed)")
-
+    parser.add_argument('-i', '--images', default=None, nargs='+',
+                      help="Paths to image files for vision model interaction (multiple files allowed)")
     args = parser.parse_args()
 
     try:
@@ -254,6 +296,7 @@ if __name__ == "__main__":
             temperature=args.temperature,
             system_prompt=args.prompt_file,
             file_paths=args.files,
+            image_paths=args.images
         )
 
         session.start()
