@@ -20,27 +20,66 @@ except Exception as e:
     exit(1)
 
 class ChatSession:
-    def __init__(self, model, temperature, system_prompt, max_history=None):
+    def __init__(self, model, temperature, system_prompt, max_history=None, file_paths=None):
         self.user_color = "32"  # Green
         self.program_color = "36"  # Cyan
         self.assistant_color = "34"  # Blue
         self.reasoning_color = "33"  # Yellow
         self.model = self._get_model_name(model)
         self.temperature = temperature
-        self.system_prompt = system_prompt
+        self.system_prompt = self._get_system_prompt(system_prompt)
+        self.file_paths = file_paths
+
+        if temperature:
+            self.temperature = temperature
+        else:
+            self.temperature = self._get_model_temp(model)
+
         if max_history is None:
             self.max_history = 10 if "reasoner" in self.model else 15
         else:
             self.max_history = max_history
+
         self.messages = [{"role": "system", "content": self.system_prompt}]
+
+        # Handle files if provided
+        if file_paths and not self.add_file_contents(file_paths):
+            raise ValueError("Failed to process one or more files")
 
     def _get_model_name(self, model_flag):
         """Convert flag to actual model name"""
         model_mapping = {
             "r1": "ecnu-reasoner",
-            "v3": "ecnu-max"
+            "v3": "ecnu-max",
         }
         return model_mapping.get(model_flag, "ecnu-max")
+
+    def _get_model_temp(self, model_flag):
+        """Get model's default temperature"""
+        model_mapping = {
+            "r1": 0.6,
+            "v3": 0.3,
+        }
+        return model_mapping.get(model_flag, 0.3)
+
+    def _get_system_prompt(self, system_prompt):
+        if system_prompt:
+            if not os.path.exists(system_prompt):
+                raise FileNotFoundError(f"Prompt file not found: {system_prompt}")
+            prompt_path = system_prompt
+        else:
+            default_file = "ecnu-r1.md" if self.model == "r1" else "ecnu-v3.md"
+            prompt_path = os.path.join(script_dir, default_file)
+
+        try:
+            with open(prompt_path, "r", encoding='utf-8') as f:
+                content = f.read()
+                if not content.strip():
+                    raise ValueError("Prompt file is empty")
+            return content
+        except Exception as e:
+            print(f"\033[1;31m[LOAD] Failed to load prompt: {str(e)}\033[0m")
+            raise
 
     def _trim_history(self):
         if len(self.messages) > self.max_history * 2 + 1:
@@ -140,13 +179,13 @@ class ChatSession:
         return True
 
 
-    def start(self, initial_files=None):
+    def start(self):
         print(f"\033[1;{self.program_color}mECNU Chat Client (Type 'exit' to quit)\033[0m\n")
         print(f"\033[1;{self.program_color}mUsing model: {self.model} (Temperature: {self.temperature})\033[0m")
         print(f"\033[1;{self.program_color}mTip: Paste multi-line text and press Ctrl+D to submit\033[0m")
 
-        if initial_files:
-            print(f"\033[1;33m{len(initial_files)} file(s) have been loaded. You can now ask questions about them.\033[0m")
+        if self.file_paths:
+            print(f"\033[1;33m{len(self.file_paths)} file(s) have been loaded. You can now ask questions about them.\033[0m")
 
         while True:
             try:
@@ -185,28 +224,6 @@ class ChatSession:
                 print(f"\033[1;31m[FATAL] Unexpected error: {str(e)}\033[0m")
                 break
 
-def load_prompt_file(model_flag, custom_path=None):
-    """Load prompt file"""
-    if custom_path:
-        if not os.path.isabs(custom_path):
-            custom_path = os.path.join(os.getcwd(), custom_path)
-        if not os.path.exists(custom_path):
-            raise FileNotFoundError(f"Prompt file not found: {custom_path}")
-        prompt_path = custom_path
-    else:
-        default_file = "ecnu-r1.md" if model_flag == "r1" else "ecnu-v3.md"
-        prompt_path = os.path.join(script_dir, default_file)
-
-    try:
-        with open(prompt_path, "r", encoding='utf-8') as f:
-            content = f.read()
-            if not content.strip():
-                raise ValueError("Prompt file is empty")
-            return content
-    except Exception as e:
-        print(f"\033[1;31m[LOAD] Failed to load prompt: {str(e)}\033[0m")
-        raise
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="A CLI client for interacting with ECNU's AI chat models.")
     parser.add_argument('-m', '--model', default='v3', choices=['v3', 'r1'],
@@ -218,21 +235,7 @@ if __name__ == "__main__":
     parser.add_argument('-f', '--files', default=None, nargs='+',
                       help="Paths to text files to upload as initial context (multiple files allowed)")
 
-
     args = parser.parse_args()
-
-    if args.temperature is not None and not (0 <= args.temperature <= 2):
-        print("\033[1;31m[ARG] Temperature must be between 0 and 2\033[0m")
-        exit(1)
-
-    try:
-        system_prompt = load_prompt_file(args.model, args.prompt_file)
-    except Exception as e:
-        print(f"\033[1;31m[STARTUP] {str(e)}\033[0m")
-        exit(1)
-
-    if args.temperature is None:
-        args.temperature = 0.6 if args.model == 'r1' else 0.3
 
     try:
         client = OpenAI(
@@ -245,13 +248,16 @@ if __name__ == "__main__":
         print(f"\033[1;31m[INIT] {str(e)}\033[0m")
         exit(1)
 
-    session = ChatSession(
-        model=args.model,
-        temperature=args.temperature,
-        system_prompt=system_prompt
-    )
+    try:
+        session = ChatSession(
+            model=args.model,
+            temperature=args.temperature,
+            system_prompt=args.prompt_file,
+            file_paths=args.files,
+        )
 
-    if args.files and not session.add_file_contents(args.files):
+        session.start()
+    except Exception as e:
+        print(f"\033[1;31m[SESSION] Failed to start session: {str(e)}\033[0m")
         exit(1)
 
-    session.start(initial_files=args.files)
