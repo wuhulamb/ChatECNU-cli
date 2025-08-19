@@ -108,43 +108,45 @@ class ChatSession:
             print(f"\n\033[1;31m[API] Error occurred: {str(e)}\033[0m")
             return False
 
-    def add_file_content(self, file_path):
-        """Add file content to conversation context"""
-        if not os.path.exists(file_path):
-            print(f"\033[1;31m[FILE] File not found: {file_path}\033[0m")
-            return False
-
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                file_content = f.read()
-
-            if not file_content.strip():
-                print(f"\033[1;33m[WARNING] Empty file: {file_path}\033[0m")
+    def add_file_contents(self, file_paths):
+        """Add multiple file contents to conversation context"""
+        for file_path in file_paths:
+            if not os.path.exists(file_path):
+                print(f"\033[1;31m[FILE] File not found: {file_path}\033[0m")
                 return False
 
-            self.messages.append({
-                "role": "system",
-                "content": f"User has uploaded a file '{os.path.basename(file_path)}'. Here is its content:\n{file_content}"
-            })
-            return True
+            try:
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    file_content = f.read()
 
-        except UnicodeDecodeError:
-            print(f"\033[1;31m[FILE] Not a UTF-8 encoded file: {file_path}\033[0m")
-            return False
-        except PermissionError:
-            print(f"\033[1;31m[FILE] Permission denied: {file_path}\033[0m")
-            return False
-        except Exception as e:
-            print(f"\033[1;31m[FILE] Error reading file: {str(e)}\033[0m")
-            return False
+                if not file_content.strip():
+                    print(f"\033[1;33m[WARNING] Empty file: {file_path}\033[0m")
+                    continue
 
-    def start(self, initial_file=None):
+                self.messages.append({
+                    "role": "system",
+                    "content": f"User has uploaded a file '{os.path.basename(file_path)}'. Here is its content:\n{file_content}"
+                })
+            except UnicodeDecodeError:
+                print(f"\033[1;31m[FILE] Not a UTF-8 encoded file: {file_path}\033[0m")
+                return False
+            except PermissionError:
+                print(f"\033[1;31m[FILE] Permission denied: {file_path}\033[0m")
+                return False
+            except Exception as e:
+                print(f"\033[1;31m[FILE] Error reading file {file_path}: {str(e)}\033[0m")
+                return False
+
+        return True
+
+
+    def start(self, initial_files=None):
         print(f"\033[1;{self.program_color}mECNU Chat Client (Type 'exit' to quit)\033[0m\n")
         print(f"\033[1;{self.program_color}mUsing model: {self.model} (Temperature: {self.temperature})\033[0m")
         print(f"\033[1;{self.program_color}mTip: Paste multi-line text and press Ctrl+D to submit\033[0m")
 
-        if initial_file:
-            print(f"\033[1;33mFile content has been loaded. You can now ask questions about it.\033[0m")
+        if initial_files:
+            print(f"\033[1;33m{len(initial_files)} file(s) have been loaded. You can now ask questions about them.\033[0m")
 
         while True:
             try:
@@ -213,8 +215,9 @@ if __name__ == "__main__":
                       help="Custom system prompt file path")
     parser.add_argument('-t', '--temperature', type=float, default=None,
                       help="Temperature parameter (default: v3=0.3, r1=0.6)")
-    parser.add_argument('-f', '--file', default=None,
-                      help="Path to text file to upload as initial context")
+    parser.add_argument('-f', '--files', default=None, nargs='+',
+                      help="Paths to text files to upload as initial context (multiple files allowed)")
+
 
     args = parser.parse_args()
 
@@ -248,7 +251,7 @@ if __name__ == "__main__":
         system_prompt=system_prompt
     )
 
-    if args.file and not session.add_file_content(args.file):
+    if args.files and not session.add_file_contents(args.files):
         exit(1)
 
-    session.start(initial_file=args.file)
+    session.start(initial_files=args.files)
