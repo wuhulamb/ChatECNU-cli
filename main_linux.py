@@ -21,7 +21,7 @@ except Exception as e:
     exit(1)
 
 class ChatSession:
-    def __init__(self, model, temperature, system_prompt, max_history=None, file_paths=None, image_paths=None):
+    def __init__(self, model, temperature, system_prompt, file_paths, image_paths):
         if image_paths:
             model = "vl"        # Use vision model if images provided
         self.user_color = "32"  # Green
@@ -37,11 +37,6 @@ class ChatSession:
             self.temperature = temperature
         else:
             self.temperature = self._get_model_temp(model)
-
-        if max_history is None:
-            self.max_history = 10 if "reasoner" in self.model else 15
-        else:
-            self.max_history = max_history
 
         self.messages = [{"role": "system", "content": self.system_prompt}]
 
@@ -88,10 +83,6 @@ class ChatSession:
         except Exception as e:
             print(f"\033[1;31m[LOAD] Failed to load prompt: {str(e)}\033[0m")
             raise
-
-    def _trim_history(self):
-        if len(self.messages) > self.max_history * 2 + 1:
-            self.messages = [self.messages[0]] + self.messages[-self.max_history * 2:]
 
     def add_user_message(self, content):
         """Add user message to conversation history"""
@@ -141,7 +132,6 @@ class ChatSession:
             print()
 
             self.messages.append({"role": "assistant", "content": "".join(full_response)})
-            self._trim_history()
             return True
 
         except ConnectionError as e:
