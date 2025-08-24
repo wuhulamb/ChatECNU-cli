@@ -73,7 +73,7 @@ python main.py [选项]
 
 - **Linux**: 输入完成后按 `Ctrl+D` 提交
 - **Windows**: 输入完成后按 `Ctrl+Z` 然后按 `Enter` 提交
-- 输入 `exit` 或 `quit` 退出程序
+- 输入 `exit` 或 `quit` 或按 `Ctrl+C` 退出程序
 
 ### 使用示例
 
