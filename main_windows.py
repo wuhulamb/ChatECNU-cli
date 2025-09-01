@@ -239,6 +239,8 @@ class ChatSession:
                         print(f"\033[1;{self.program_color}mSession terminated by Ctrl+C\033[0m")
                         return
                     lines.append(line)
+                    if line.strip().lower() in ['exit', 'quit']:
+                        break
                 user_input = "\n".join(lines).strip()
 
                 if user_input.lower() in ['exit', 'quit']:
