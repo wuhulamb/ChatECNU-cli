@@ -33,15 +33,11 @@ class ChatSession:
         self.assistant_color = "34"  # Blue
         self.reasoning_color = "33"  # Yellow
         self.model = self._get_model_name(model)
+        self.temperature = self._get_model_temp(temperature)
         self.system_prompt = self._get_system_prompt(system_prompt)
         self.file_paths = file_paths
         self.image_paths = image_paths
         self.load_chat_file = load_chat_file
-
-        if temperature:
-            self.temperature = temperature
-        else:
-            self.temperature = self._get_model_temp(model)
 
         self.messages = [{"role": "system", "content": self.system_prompt}]
 
@@ -64,14 +60,18 @@ class ChatSession:
         }
         return model_mapping.get(model_flag, "ecnu-max")
 
-    def _get_model_temp(self, model_flag):
+    def _get_model_temp(self, temperature):
         """Get default temperature for model"""
         model_mapping = {
-            "r1": 0.6,
-            "v3": 0.3,
-            "vl": 0.01,
+            "ecnu-reasoner": 0.6,
+            "ecnu-max": 0.3,
+            "ecnu-vl": 0.01,
         }
-        return model_mapping.get(model_flag, 0.3)
+
+        if temperature:
+            return temperature
+        else:
+            return model_mapping.get(self.model, 0.3)
 
     def _get_system_prompt(self, system_prompt):
         """Load system prompt from file"""
