@@ -29,7 +29,6 @@
 .
 ├── main_linux.py        # Linux版本主程序
 ├── main_windows.py      # Windows版本主程序
-├── .env                 # 环境变量配置文件（需自行创建）
 ├── .env.example         # 环境变量示例
 ├── ecnu-v3.md           # ecnu-max模型默认提示词
 ├── ecnu-r1.md           # ecnu-reasoner模型默认提示词
