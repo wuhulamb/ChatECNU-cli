@@ -1,10 +1,14 @@
 # windows version
-import os
 import argparse
-import ctypes
 import base64
-from openai import OpenAI
+import ctypes
+import datetime
+import json
+import os
+import re
+
 from dotenv import load_dotenv
+from openai import OpenAI
 
 # Windows-specific initialization for ANSI color support
 if os.name == 'nt':
@@ -26,7 +30,7 @@ except Exception as e:
     exit(1)
 
 class ChatSession:
-    def __init__(self, model, temperature, system_prompt, file_paths, image_paths):
+    def __init__(self, model, temperature, system_prompt, file_paths, image_paths, load_chat_file):
         if image_paths:
             model = "vl"        # Use vision model if images provided
         self.user_color = "32"  # Green
@@ -37,6 +41,7 @@ class ChatSession:
         self.system_prompt = self._get_system_prompt(system_prompt)
         self.file_paths = file_paths
         self.image_paths = image_paths
+        self.load_chat_file = load_chat_file
 
         if temperature:
             self.temperature = temperature
@@ -44,6 +49,10 @@ class ChatSession:
             self.temperature = self._get_model_temp(model)
 
         self.messages = [{"role": "system", "content": self.system_prompt}]
+
+        # Load conversation history if specified
+        if load_chat_file and not self.load_conversation(load_chat_file):
+            raise ValueError(f"Failed to load conversation from {load_chat_file}")
 
         # Process files and images
         if file_paths and not self.add_file_contents(file_paths):
@@ -89,6 +98,24 @@ class ChatSession:
         except Exception as e:
             print(f"\033[1;31m[LOAD] Failed to load prompt: {str(e)}\033[0m")
             raise
+
+    def _has_image_content(self, content):
+        """Check if the message content contains any image content."""
+        if isinstance(content, list):
+            for item in content:
+                if isinstance(item, dict) and item.get("type") == "image_url":
+                    return True
+        return False
+
+    def _extract_text_content(self, content):
+        """Extract text content from a message content, which may be a string or a list of content parts."""
+        if isinstance(content, list):
+            for item in content:
+                if isinstance(item, dict) and item.get("type") == "text":
+                    return item.get("text", "")
+            return ""  # Return empty if no text content found
+        else:
+            return content  # Assume it's a string
 
     def add_user_message(self, content):
         """Add user message to conversation history"""
@@ -150,6 +177,45 @@ class ChatSession:
             print(f"\n\033[1;31m[API] Error occurred: {str(e)}\033[0m")
             return False
 
+    def generate_summary(self):
+        """Generate a summary of the conversation for use as filename"""
+        try:
+            # Extract text-only content from all messages for summary generation
+            text_only_messages = []
+            for msg in self.messages:
+                text_content = self._extract_text_content(msg.get("content", ""))
+                if text_content:
+                    text_only_messages.append({
+                        "role": msg["role"],
+                        "content": text_content
+                    })
+
+            # Create a prompt for generating a concise summary
+            summary_prompt = [
+                {"role": "system", "content": "You are a helpful assistant that creates very concise, 3-5 word summaries of conversations. Respond with only the summary text, no additional commentary."},
+                {"role": "user", "content": f"Please provide a very concise 3-5 word summary of this conversation. Focus on the main topic or theme:\n\n{json.dumps(text_only_messages, ensure_ascii=False)}"}
+            ]
+
+            response = client.chat.completions.create(
+                model='ecnu-max',
+                messages=summary_prompt,
+                temperature=0.1,  # Low temperature for consistent output
+            )
+
+            summary = response.choices[0].message.content.strip()
+
+            # Clean up the summary for filename use
+            summary = re.sub(r'[^\w\s-]', '', summary)  # Remove special characters
+            summary = re.sub(r'[-\s]+', '_', summary)   # Replace spaces and hyphens with underscores
+            summary = summary.lower()                   # Convert to lowercase
+            summary = summary[:50]                      # Limit length
+
+            return summary if summary else "conversation"
+
+        except Exception as e:
+            print(f"\033[1;31m[SUMMARY] Failed to generate summary: {str(e)}\033[0m")
+            return None
+
     def add_file_contents(self, file_paths):
         """Add multiple file contents to conversation context"""
         for file_path in file_paths:
@@ -163,7 +229,7 @@ class ChatSession:
                     file_content = f.read()
 
                 if not file_content.strip():
-                    print(f"\033[1;33m[WARNING] Empty file: {file_path}\033[0m")
+                    print(f"\033[1;31m[WARNING] Empty file: {file_path}\033[0m")
                     continue
 
                 self.messages.append({
@@ -216,15 +282,114 @@ class ChatSession:
 
         return True
 
+    def save_conversation(self):
+        """Save the current conversation history and session metadata to a JSON file."""
+        if len(self.messages) <= 1:
+            print(f"\033[1;31m[SAVE] No conversation content to save (only system prompt exists).\033[0m")
+            return False
+
+        saved_chats_dir = os.path.join(script_dir, "saved_chats")
+        os.makedirs(saved_chats_dir, exist_ok=True)
+
+        # Generate summary for filename
+        summary = self.generate_summary()
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        if summary:
+            filename = f"chat_{timestamp}_{summary}.json"
+        else:
+            filename = f"chat_{timestamp}.json"
+
+        filepath = os.path.join(saved_chats_dir, filename)
+
+        # Create a structured object containing both metadata and messages
+        conversation_data = {
+            "metadata": {
+                "model": self.model,
+                "temperature": self.temperature,
+                "system_prompt": self.system_prompt,
+                "saved_at": datetime.datetime.now().isoformat()
+            },
+            "messages": self.messages[1:]
+        }
+
+        try:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(conversation_data, f, indent=4, ensure_ascii=False)
+            print(f"\033[1;{self.program_color}m[SAVE] Conversation saved to {filepath}\033[0m")
+            return True
+        except Exception as e:
+            print(f"\033[1;31m[SAVE] Failed to save conversation: {str(e)}\033[0m")
+            return False
+
+    def load_conversation(self, chat_file_path):
+        """Load conversation history and session metadata from a JSON file."""
+        try:
+            chat_file_path = os.path.normpath(chat_file_path)  # Normalize path for Windows
+            if not os.path.exists(chat_file_path):
+                print(f"\033[1;31m[LOAD] Chat file not found: {chat_file_path}\033[0m")
+                return False
+
+            # Read and parse the JSON file
+            with open(chat_file_path, 'r', encoding='utf-8') as f:
+                loaded_data = json.load(f)
+
+            if isinstance(loaded_data, dict) and "metadata" in loaded_data and "messages" in loaded_data:
+                metadata = loaded_data["metadata"]
+                self.model = metadata.get("model", self.model)
+                self.temperature = metadata.get("temperature", self.temperature)
+                self.system_prompt = metadata.get("system_prompt", self.system_prompt)
+                loaded_messages = loaded_data["messages"]
+
+            # Validate the loaded messages structure
+            if not isinstance(loaded_messages, list) or len(loaded_messages) == 0:
+                print(f"\033[1;31m[LOAD] Invalid chat file format\033[0m")
+                return False
+
+            # Check if any message contains image content
+            has_images = False
+            for msg in loaded_messages:
+                if self._has_image_content(msg.get("content", "")):
+                    has_images = True
+                    break
+
+            # If images are detected, switch to vision model
+            if has_images and self.model != "ecnu-vl":
+                self.model = "ecnu-vl"
+                self.temperature = self._get_model_temp("vl")
+
+            # Replace current messages with loaded ones (preserve system prompt)
+            if loaded_messages[0]["role"] == "system":
+                self.messages = loaded_messages
+            else:
+                self.messages = [{"role": "system", "content": self.system_prompt}] + loaded_messages
+
+            return True
+
+        except json.JSONDecodeError:
+            print(f"\033[1;31m[LOAD] Invalid JSON format in chat file\033[0m")
+            return False
+        except Exception as e:
+            print(f"\033[1;31m[LOAD] Error loading conversation: {str(e)}\033[0m")
+            return False
+
     def start(self):
-        print(f"\033[1;{self.program_color}mECNU Chat Client (Type 'exit' to quit)\033[0m\n")
-        print(f"\033[1;{self.program_color}mUsing model: {self.model} (Temperature: {self.temperature})\033[0m")
-        print(f"\033[1;{self.program_color}mTip: Paste multi-line text and press Ctrl+Z + Enter to submit\033[0m")
+        print(f"\033[1;{self.program_color}mECNU Chat Client\033[0m\n")
+        print(f"\033[1;{self.program_color}mModel: {self.model} | Temperature: {self.temperature}\033[0m")
+        print(f"\033[1;{self.program_color}m(Type 'exit' to quit, 'save' to save conversation)\033[0m")
 
         if self.file_paths:
             print(f"\033[1;33m{len(self.file_paths)} file(s) have been loaded. You can now ask questions about them.\033[0m")
         if self.image_paths:
             print(f"\033[1;33m{len(self.image_paths)} image(s) have been loaded. You can now ask questions about them.\033[0m")
+
+        if self.load_chat_file:
+            print(f"\033[1;33m[LOAD] Conversation loaded from {self.load_chat_file}\033[0m")
+            user_messages = [msg for msg in self.messages if msg["role"] == "user"]
+            for i, msg in enumerate(user_messages, 1):
+                text_content = self._extract_text_content(msg.get("content", ""))
+                if len(text_content) > 300:
+                    text_content = text_content[:297] + "..."
+                print(f"\033[1;{self.user_color}mUser Message {i}:\033[0m {text_content}")
 
         while True:
             try:
@@ -239,13 +404,16 @@ class ChatSession:
                         print(f"\033[1;{self.program_color}mSession terminated by Ctrl+C\033[0m")
                         return
                     lines.append(line)
-                    if line.strip().lower() in ['exit', 'quit']:
+                    if line.strip().lower() in ['exit', 'quit', 'save', 'q', 's']:
                         break
                 user_input = "\n".join(lines).strip()
 
-                if user_input.lower() in ['exit', 'quit']:
+                if user_input.lower() in ['exit', 'quit', 'q']:
                     print(f"\033[1;{self.program_color}mExiting...\033[0m")
                     break
+                elif user_input.lower() in ['save', 's']:
+                    self.save_conversation()
+                    continue
                 if not user_input:
                     continue
 
@@ -275,6 +443,8 @@ if __name__ == "__main__":
                       help="Paths to text files to upload as initial context (multiple files allowed)")
     parser.add_argument('-i', '--images', default=None, nargs='+',
                       help="Paths to image files for vision model interaction (multiple files allowed)")
+    parser.add_argument('-l', '--load-chat', default=None,
+                      help="Path to a saved chat JSON file to load and continue conversation")
     args = parser.parse_args()
 
     try:
@@ -294,7 +464,8 @@ if __name__ == "__main__":
             temperature=args.temperature,
             system_prompt=args.prompt_file,
             file_paths=args.files,
-            image_paths=args.images
+            image_paths=args.images,
+            load_chat_file=args.load_chat
         )
 
         session.start()

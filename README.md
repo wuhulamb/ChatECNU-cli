@@ -4,34 +4,45 @@
 
 ## 功能特性
 
-- 支持多平台：Linux和Windows版本
-- 多模型选择：
-  - `ecnu-max` (v3): 默认通用模型
-  - `ecnu-reasoner` (r1): 推理增强模型（显示思考过程）
-  - `ecnu-vl` (vl): 自动启用的视觉模型（当传入图片时）
-- 交互式对话界面
-- 可调节的温度参数
-- 自定义系统提示词
-- 文件上传与解析（支持文本文件）
-- 图片内容理解（支持JPEG等常见格式）
-- 彩色终端输出（支持Windows ANSI颜色）
+- **跨平台支持**：提供Linux和Windows两个版本
+- **多模型选择**：
+  - `ecnu-max` (v3): 默认通用模型，温度默认0.3
+  - `ecnu-reasoner` (r1): 推理增强模型（显示思考过程），温度默认0.6
+  - `ecnu-vl` (vl): 自动启用的视觉模型（当传入图片时），温度默认0.01
+- **丰富的交互功能**：
+  - 交互式对话界面
+  - 可调节的温度参数
+  - 自定义系统提示词
+  - 文件上传与解析（支持文本文件）
+  - 图片内容理解（支持JPEG等常见格式）
+  - 对话历史保存与加载
+  - 自动生成对话摘要作为文件名
+- **终端优化**：
+  - 彩色输出（支持Windows ANSI颜色）
+  - 流式响应显示
+  - 多行输入支持
+
 
 ## 文件结构
 
 ```text
 .
-├── main_linux.py        # Linux主程序
-├── main_windows.py      # Windows主程序
+├── main_linux.py        # Linux版本主程序
+├── main_windows.py      # Windows版本主程序
+├── .env                 # 环境变量配置文件（需自行创建）
 ├── .env.example         # 环境变量示例
-├── ecnu-v3.md           # 默认系统提示词
-└── ecnu-r1.md           # 推理模型提示词
+├── ecnu-v3.md           # ecnu-max模型默认提示词
+├── ecnu-r1.md           # ecnu-reasoner模型默认提示词
+└── saved_chats/         # 自动创建的对话保存目录
+    └── chat_*.json      # 保存的对话文件
 ```
 
 ## 系统要求
 
 - Python 3.7+
-- Windows 10+ 或 Linux
-- 有效的API密钥（存储在.env文件中）
+- 依赖包：`openai`、`python-dotenv`
+- 操作系统：Windows 10+ 或 Linux
+- 有效的API密钥（需配置在.env文件中）
 
 ## 安装步骤
 
@@ -66,14 +77,22 @@ python main.py [选项]
 | `-m`, `--model` | 选择模型(v3/r1) | v3 |
 | `-t`, `--temperature` | 设置生成温度 | 模型默认值 |
 | `-p`, `--prompt-file` | 自定义提示词文件 | 内置文件 |
-| `-f`, `--files` | 上传文本文件 | 无 |
-| `-i`, `--images` | 上传图片文件 | 无 |
+| `-f`, `--files` | 上传文本文件（可多个） | 无 |
+| `-i`, `--images` | 上传图片文件（可多个） | 无 |
+| `-l`, `--load-chat` | 加载已保存的对话文件 | 无 |
 
 ### 交互控制
 
-- **Linux**: 输入完成后按 `Ctrl+D` 提交
-- **Windows**: 输入完成后按 `Ctrl+Z` 然后按 `Enter` 提交
-- 输入 `exit` 或 `quit` 或按 `Ctrl+C` 退出程序
+- **输入提交**：
+  - Linux: 输入完成后按 `Ctrl+D`
+  - Windows: 输入完成后按 `Ctrl+Z` 然后按 `Enter`
+
+- **退出程序**：
+  - 输入 `exit`、`quit` 或 `q`
+  - 按 `Ctrl+C` 强制退出
+
+- **保存对话**：
+  - 输入 `save` 或 `s` 保存当前对话
 
 ### 使用示例
 
@@ -95,6 +114,11 @@ python main.py [选项]
 4. 自定义温度和提示：
    ```bash
    python main.py -t 0.8 -p custom_prompt.md
+   ```
+
+5. **继续之前对话**：
+   ```bash
+   python main.py -l saved_chats/chat_20250901_223022_discussion.json
    ```
 
 ## 版本说明
@@ -129,4 +153,4 @@ python main.py [选项]
 2. 程序所在目录要有`ecnu-v3.md`和`ecnu-r1.md`文件
 3. `-f`上传的文件必须是UTF-8编码的文本文件
 4. 大温度值可能导致输出更加随机
-5. Windows用户注意路径分隔符
+5. 大图像文件模型可能无法处理
