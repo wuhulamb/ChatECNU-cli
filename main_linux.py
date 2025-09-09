@@ -366,7 +366,7 @@ class ChatSession:
     def start(self):
         print(f"\033[1;{self.program_color}mECNU Chat Client\033[0m\n")
         print(f"\033[1;{self.program_color}mModel: {self.model} | Temperature: {self.temperature}\033[0m")
-        print(f"\033[1;{self.program_color}m(Type 'exit' to quit, 'save' to save conversation)\033[0m")
+        print(f"\033[1;{self.program_color}m(Type 'q' to quit, 's' to save conversation, 'c' to clear input)\033[0m")
 
         if self.file_paths:
             print(f"\033[1;33m{len(self.file_paths)} file(s) have been loaded. You can now ask questions about them.\033[0m")
@@ -397,6 +397,10 @@ class ChatSession:
                         return
                     lines.append(line)
                     if line.strip().lower() in ['exit', 'quit', 'save', 'q', 's']:
+                        break
+                    elif line.strip().lower() in ['clear', 'c']:
+                        lines = []
+                        print(f"\033[1;{self.program_color}mInput cleared\033[0m")
                         break
 
                 user_input = "\n".join(lines).strip()
