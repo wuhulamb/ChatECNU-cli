@@ -396,7 +396,7 @@ class ChatSession:
                         print(f"\033[1;{self.program_color}mSession terminated by Ctrl+C\033[0m")
                         return
                     lines.append(line)
-                    if line.strip().lower() in ['exit', 'quit', 'save', 'q', 's']:
+                    if len(lines) == 1 and line.strip().lower() in ['exit', 'quit', 'save', 'q', 's']:
                         break
                     elif line.strip().lower() in ['clear', 'c']:
                         lines = []
