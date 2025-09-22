@@ -28,6 +28,7 @@
 .
 ├── main_linux.py        # Linux版本主程序
 ├── main_windows.py      # Windows版本主程序
+├── config.json          # 配置文件（必须）
 ├── .env.example         # 环境变量示例
 ├── ecnu-v3.md           # ecnu-max模型默认提示词
 ├── ecnu-r1.md           # ecnu-reasoner模型默认提示词
@@ -53,7 +54,11 @@
    ```
    CHATECNU_API_KEY=your_api_key_here
    ```
-4. 提示文件（必须）
+4. **配置文件（必须）**
+
+   程序需要`config.json`配置文件，该配置文件预设了模型参数等信息，请下载下来放在脚本同目录下
+
+5. **提示文件（必须）**
 
    将项目中的两个提示文件一并下载下来，放在脚本同目录下，程序会自动根据模型选择加载对应的提示文件：
    - `ecnu-v3.md`：ecnu-max模型默认提示
@@ -151,7 +156,7 @@ python main.py [选项]
 ## 注意事项
 
 1. 确保`.env`文件中配置了正确的API密钥
-2. 程序所在目录要有`ecnu-v3.md`和`ecnu-r1.md`文件
+2. 程序所在目录要有`config.json`, `ecnu-v3.md`和`ecnu-r1.md`文件
 3. `-f`上传的文件必须是UTF-8编码的文本文件
 4. 大温度值可能导致输出更加随机
 5. 大图像文件模型可能无法处理
