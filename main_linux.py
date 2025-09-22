@@ -75,7 +75,7 @@ class ChatSession:
     def _get_model_name(self, model_flag):
         """Map model flag to actual model name from config"""
         model_mapping = self.config["model_name"]
-        return model_mapping.get(model_flag, self.config["model_name"]["v3"])
+        return model_mapping.get(model_flag, self.config["model_name"][self.config["default_model"]])
 
     def _get_model_temp(self, temperature):
         """Get default temperature for model from config"""

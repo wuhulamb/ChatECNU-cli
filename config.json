@@ -1,4 +1,5 @@
 {
+  "default_model": "v3",
   "model_name": {
     "v3": "ecnu-max",
     "r1": "ecnu-reasoner",
