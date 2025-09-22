@@ -28,10 +28,11 @@
 .
 ├── main_linux.py        # Linux版本主程序
 ├── main_windows.py      # Windows版本主程序
-├── config.json          # 配置文件（必须）
 ├── .env.example         # 环境变量示例
-├── ecnu-v3.md           # ecnu-max模型默认提示词
-├── ecnu-r1.md           # ecnu-reasoner模型默认提示词
+├── config.json          # 配置文件（必须）
+├── prompts/             # 提示词文件夹（必须）
+│   ├── ecnu-r1.md       # ecnu-max模型默认提示词
+│   └── ecnu-v3.md       # ecnu-reasoner模型默认提示词
 └── saved_chats/         # 自动创建的对话保存目录
     └── chat_*.json      # 保存的对话文件
 ```
@@ -60,7 +61,7 @@
 
 5. **提示文件（必须）**
 
-   将项目中的两个提示文件一并下载下来，放在脚本同目录下，程序会自动根据模型选择加载对应的提示文件：
+   将项目中的`prompts`文件夹下载下来，放在脚本同目录下，程序会自动根据模型选择加载对应的提示文件：
    - `ecnu-v3.md`：ecnu-max模型默认提示
    - `ecnu-r1.md`：ecnu-reasoner模型默认提示
 
@@ -122,7 +123,7 @@ python main.py [选项]
    python main.py -t 0.8 -p custom_prompt.md
    ```
 
-5. **继续之前对话**：
+5. 继续之前对话：
    ```bash
    python main.py -l saved_chats/chat_20250901_223022_discussion.json
    ```

@@ -100,9 +100,10 @@ class ChatSession:
             prompt_path = system_prompt
         else:
             # Use prompt mapping from config
+            prompts_dir = self.config["paths"]["prompts_dir"]
             prompt_mapping = self.config["prompt_defaults"]
             default_file = prompt_mapping["r1"] if self.model == "r1" else prompt_mapping["default"]
-            prompt_path = os.path.join(script_dir, default_file)
+            prompt_path = os.path.join(script_dir, prompts_dir, default_file)
 
         try:
             with open(prompt_path, "r", encoding='utf-8') as f:
