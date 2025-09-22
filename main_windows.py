@@ -80,7 +80,7 @@ class ChatSession:
     def _get_model_name(self, model_flag):
         """Map model flag to actual model name from config"""
         model_mapping = self.config["model_name"]
-        return model_mapping.get(model_flag, self.config["model_name"][self.config["default_model"]])
+        return model_mapping.get(model_flag, self.config["model_name"]["default"])
 
     def _get_model_temp(self, temperature):
         """Get default temperature for model from config"""
@@ -89,7 +89,7 @@ class ChatSession:
         if temperature:
             return temperature
         else:
-            return model_mapping.get(self.model, 0.3)
+            return model_mapping.get(self.model, self.config["temperature_defaults"]["default"])
 
     def _get_system_prompt(self, system_prompt):
         """Load system prompt from file from config"""
@@ -102,7 +102,7 @@ class ChatSession:
             # Use prompt mapping from config
             prompts_dir = self.config["paths"]["prompts_dir"]
             prompt_mapping = self.config["prompt_defaults"]
-            default_file = prompt_mapping["r1"] if self.model == "r1" else prompt_mapping["default"]
+            default_file = prompt_mapping.get(self.model, self.config["prompt_defaults"]["default"])
             prompt_path = os.path.join(script_dir, prompts_dir, default_file)
 
         try:

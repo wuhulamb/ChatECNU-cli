@@ -1,17 +1,18 @@
 {
-  "default_model": "v3",
   "model_name": {
     "v3": "ecnu-max",
     "r1": "ecnu-reasoner",
-    "vl": "ecnu-vl"
+    "vl": "ecnu-vl",
+    "default": "ecnu-max"
   },
   "temperature_defaults": {
     "ecnu-reasoner": 0.6,
     "ecnu-max": 0.3,
-    "ecnu-vl": 0.01
+    "ecnu-vl": 0.01,
+    "default": 0.3
   },
   "prompt_defaults": {
-    "r1": "ecnu-r1.md",
+    "ecnu-reasoner": "ecnu-r1.md",
     "default": "ecnu-v3.md"
   },
   "colors": {
