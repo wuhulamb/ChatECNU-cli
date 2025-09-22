@@ -26,12 +26,17 @@ except Exception as e:
 
 class ChatSession:
     def __init__(self, model, temperature, system_prompt, file_paths, image_paths, load_chat_file):
+        # Load configuration
+        self.config = self.load_config()
         if image_paths:
             model = "vl"        # Use vision model if images provided
-        self.user_color = "32"  # Green
-        self.program_color = "36"  # Cyan
-        self.assistant_color = "34"  # Blue
-        self.reasoning_color = "33"  # Yellow
+
+        # Use colors from config
+        self.user_color = self.config["colors"]["user"]
+        self.program_color = self.config["colors"]["program"]
+        self.assistant_color = self.config["colors"]["assistant"]
+        self.reasoning_color = self.config["colors"]["reasoning"]
+
         self.model = self._get_model_name(model)
         self.temperature = self._get_model_temp(temperature)
         self.system_prompt = self._get_system_prompt(system_prompt)
@@ -51,22 +56,30 @@ class ChatSession:
         if image_paths and not self.add_image_contents(image_paths):
             raise ValueError("Failed to process one or more images")
 
+    def load_config(self):
+        """Load configuration from config.json"""
+        config_path = os.path.join(script_dir, "config.json")
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except FileNotFoundError:
+            print(f"\033[1;31m[CONFIG] Configuration file not found: {config_path}\033[0m")
+            exit(1)
+        except json.JSONDecodeError:
+            print(f"\033[1;31m[CONFIG] Invalid JSON format in config file\033[0m")
+            exit(1)
+        except Exception as e:
+            print(f"\033[1;31m[CONFIG] Error loading config: {str(e)}\033[0m")
+            exit(1)
+
     def _get_model_name(self, model_flag):
-        """Map model flag to actual model name"""
-        model_mapping = {
-            "r1": "ecnu-reasoner",
-            "v3": "ecnu-max",
-            "vl": "ecnu-vl",
-        }
-        return model_mapping.get(model_flag, "ecnu-max")
+        """Map model flag to actual model name from config"""
+        model_mapping = self.config["model_name"]
+        return model_mapping.get(model_flag, self.config["model_name"]["v3"])
 
     def _get_model_temp(self, temperature):
-        """Get default temperature for model"""
-        model_mapping = {
-            "ecnu-reasoner": 0.6,
-            "ecnu-max": 0.3,
-            "ecnu-vl": 0.01,
-        }
+        """Get default temperature for model from config"""
+        model_mapping = self.config["temperature_defaults"]
 
         if temperature:
             return temperature
@@ -74,13 +87,15 @@ class ChatSession:
             return model_mapping.get(self.model, 0.3)
 
     def _get_system_prompt(self, system_prompt):
-        """Load system prompt from file"""
+        """Load system prompt from file from config"""
         if system_prompt:
             if not os.path.exists(system_prompt):
                 raise FileNotFoundError(f"Prompt file not found: {system_prompt}")
             prompt_path = system_prompt
         else:
-            default_file = "ecnu-r1.md" if self.model == "r1" else "ecnu-v3.md"
+            # Use prompt mapping from config
+            prompt_mapping = self.config["prompt_defaults"]
+            default_file = prompt_mapping["r1"] if self.model == "r1" else prompt_mapping["default"]
             prompt_path = os.path.join(script_dir, default_file)
 
         try:
@@ -280,7 +295,8 @@ class ChatSession:
             print(f"\033[1;31m[SAVE] No conversation content to save (only system prompt exists).\033[0m")
             return False
 
-        saved_chats_dir = os.path.join(script_dir, "saved_chats")
+        # Use saved_chats_dir from config
+        saved_chats_dir = os.path.join(script_dir, self.config["paths"]["saved_chats_dir"])
         os.makedirs(saved_chats_dir, exist_ok=True)
 
         # Generate summary for filename
@@ -430,7 +446,7 @@ class ChatSession:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="A CLI client for interacting with ECNU's AI chat models.")
-    parser.add_argument('-m', '--model', default='v3', choices=['v3', 'r1'],
+    parser.add_argument('-m', '--model', default=None, choices=['v3', 'r1'],
                       help="Model selection: v3=ecnu-max (default), r1=ecnu-reasoner")
     parser.add_argument('-p', '--prompt-file', default=None,
                       help="Custom system prompt file path")

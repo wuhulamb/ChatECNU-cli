@@ -1,0 +1,25 @@
+{
+  "model_name": {
+    "v3": "ecnu-max",
+    "r1": "ecnu-reasoner",
+    "vl": "ecnu-vl"
+  },
+  "temperature_defaults": {
+    "ecnu-reasoner": 0.6,
+    "ecnu-max": 0.3,
+    "ecnu-vl": 0.01
+  },
+  "prompt_defaults": {
+    "r1": "ecnu-r1.md",
+    "default": "ecnu-v3.md"
+  },
+  "colors": {
+    "user": "32",
+    "program": "36",
+    "assistant": "34",
+    "reasoning": "33"
+  },
+  "paths": {
+    "saved_chats_dir": "saved_chats"
+  }
+}
