@@ -20,6 +20,7 @@
     "reasoning": "33"
   },
   "paths": {
-    "saved_chats_dir": "saved_chats"
+    "saved_chats_dir": "saved_chats",
+    "prompts_dir": "prompts"
   }
 }
