@@ -32,7 +32,8 @@
 ├── config.json          # 配置文件（必须）
 ├── prompts/             # 提示词文件夹（必须）
 │   ├── ecnu-r1.md       # ecnu-max模型默认提示词
-│   └── ecnu-v3.md       # ecnu-reasoner模型默认提示词
+│   ├── ecnu-v3.md       # ecnu-reasoner模型默认提示词
+│   └── ...              # 其他提示词示例（需-p手动指定）
 └── saved_chats/         # 自动创建的对话保存目录
     └── chat_*.json      # 保存的对话文件
 ```
@@ -61,9 +62,10 @@
 
 5. **提示文件（必须）**
 
-   将项目中的`prompts`文件夹下载下来，放在脚本同目录下，程序会自动根据模型选择加载对应的提示文件：
-   - `ecnu-v3.md`：ecnu-max模型默认提示
-   - `ecnu-r1.md`：ecnu-reasoner模型默认提示
+   将项目中的`prompts`文件夹下载下来，放在脚本同目录下，程序会自动根据模型选择加载对应的提示文件（`ecnu-v3.md`或`ecnu-r1.md`）：
+   - `ecnu-v3.md`：ecnu-max模型默认提示（必须）
+   - `ecnu-r1.md`：ecnu-reasoner模型默认提示（必须）
+   - ...: 其他提示词示例（需-p手动指定）
 
 ## 使用方法
 
