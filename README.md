@@ -58,7 +58,7 @@
    ```
 4. **配置文件（必须）**
 
-   程序需要`config.json`配置文件，该配置文件预设了模型参数等信息，请下载下来放在脚本同目录下
+   程序需要`config.json`配置文件，该配置文件预设了模型参数等信息，请下载下来放在脚本同目录下。想要自己修改配置文件，可看[附录中的配置文件](#配置文件)部分。
 
 5. **提示文件（必须）**
 
@@ -163,3 +163,42 @@ python main.py [选项]
 3. `-f`上传的文件必须是UTF-8编码的文本文件
 4. 大温度值可能导致输出更加随机
 5. 大图像文件模型可能无法处理
+
+## 附录
+
+### 配置文件
+
+```json
+{
+  "model_name": {
+    "v3": "ecnu-max",
+    "r1": "ecnu-reasoner",
+    "vl": "ecnu-vl",
+    "default": "ecnu-max"
+  },
+  "temperature_defaults": {
+    "ecnu-reasoner": 0.6,
+    "ecnu-max": 0.3,
+    "ecnu-vl": 0.01,
+    "default": 0.3
+  },
+  "prompt_defaults": {
+    "ecnu-reasoner": "ecnu-r1.md",
+    "default": "ecnu-v3.md"
+  },
+  "colors": {
+    "user": "32",
+    "program": "36",
+    "assistant": "34",
+    "reasoning": "33"
+  },
+  "paths": {
+    "saved_chats_dir": "saved_chats",
+    "prompts_dir": "prompts"
+  }
+}
+```
+
+修改`config["model_name"]["default"]`的值可以指定默认使用的模型，config.json文件中该参数的值是`ecnu-max`，意味着运行`python main.py`默认使用`ecnu-max`模型，如果修改为`ecnu-reasoner`，则默认使用`ecnu-reasoner`模型。
+
+`config["temperature_defaults"]`和`config["prompt_defaults"]`是模型的预设参数，例如`ecnu-reasoner`的预设温度为`0.6`，预设提示词为`ecnu-r1.md`文件。
