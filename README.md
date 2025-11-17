@@ -1,6 +1,6 @@
 # ECNU Chat Client
 
-一个跨平台的命令行客户端，用于与华东师范大学AI聊天模型交互，支持文本和图像输入。
+跨平台命令行客户端，用于与华东师范大学AI聊天模型交互，支持文本和图像输入。
 
 ## 功能特性
 
@@ -8,35 +8,19 @@
 - **多模型选择**：
   - `ecnu-max` (v3): 默认通用模型，温度默认0.3
   - `ecnu-reasoner` (r1): 推理增强模型（显示思考过程），温度默认0.6
-  - `ecnu-vl` (vl): 自动启用的视觉模型（当传入图片时），温度默认0.01
-- **丰富的交互功能**：
+  - `ecnu-vl` (vl): 多模态视觉模型，自动启用（使用`-i`参数时）
+- **交互功能**：
   - 交互式对话界面
-  - 可调节的温度参数
+  - 可调节温度参数
   - 自定义系统提示词
-  - 文件上传与解析（支持文本文件）
-  - 图片内容理解（支持JPEG等常见格式）
+  - 文件上传与解析（文本文件）
+  - 图片内容理解（JPEG等格式）
   - 对话历史保存与加载
   - 自动生成对话摘要作为文件名
 - **终端优化**：
   - 彩色输出（支持Windows ANSI颜色）
   - 流式响应显示
   - 多行输入支持
-
-## 文件结构
-
-```text
-.
-├── main_linux.py        # Linux版本主程序
-├── main_windows.py      # Windows版本主程序
-├── .env.example         # 环境变量示例
-├── config.json          # 配置文件（必须）
-├── prompts/             # 提示词文件夹（必须）
-│   ├── ecnu-r1.md       # ecnu-max模型默认提示词
-│   ├── ecnu-v3.md       # ecnu-reasoner模型默认提示词
-│   └── ...              # 其他提示词示例（需-p手动指定）
-└── saved_chats/         # 自动创建的对话保存目录
-    └── chat_*.json      # 保存的对话文件
-```
 
 ## 系统要求
 
@@ -45,41 +29,37 @@
 - 操作系统：Windows 10+ 或 Linux
 - 有效的API密钥（需配置在.env文件中）
 
-## 安装步骤
+## 快速开始
 
-1. 克隆仓库或下载源代码
-2. 安装依赖：
-   ```
+1. **安装依赖**：
+   ```bash
    pip install openai python-dotenv
    ```
-3. 创建`.env`文件并添加API密钥：
+
+2. **配置环境**：
+   - 创建`.env`文件并添加API密钥：
+     ```
+     CHATECNU_API_KEY=your_api_key_here
+     ```
+   - 确保项目包含必要的配置文件：
+     - `config.json` - 模型配置（必须）
+     - `prompts/`文件夹 - 包含`ecnu-v3.md`和`ecnu-r1.md`提示词文件（必须）
+
+3. **启动客户端**：
+   ```bash
+   # Linux
+   python main_linux.py
+
+   # Windows
+   python main_windows.py
    ```
-   CHATECNU_API_KEY=your_api_key_here
-   ```
-4. **配置文件（必须）**
-
-   程序需要`config.json`配置文件，该配置文件预设了模型参数等信息，请下载下来放在脚本同目录下。想要自己修改配置文件，可看[附录中的配置文件](#配置文件)部分。
-
-5. **提示文件（必须）**
-
-   将项目中的`prompts`文件夹下载下来，放在脚本同目录下，程序会自动根据模型选择加载对应的提示文件（`ecnu-v3.md`或`ecnu-r1.md`）：
-   - `ecnu-v3.md`：ecnu-max模型默认提示（必须）
-   - `ecnu-r1.md`：ecnu-reasoner模型默认提示（必须）
-   - ...: 其他提示词示例（需-p手动指定）
 
 ## 使用方法
-
-### 基本命令
-
-```bash
-python main.py [选项]
-```
 
 ### 命令行选项
 
 | 选项 | 描述 | 默认值 |
 |------|------|--------|
-| `-h`, `--help` | 显示帮助信息并退出 | 无 |
 | `-m`, `--model` | 选择模型(v3/r1) | v3 |
 | `-t`, `--temperature` | 设置生成温度 | 模型默认值 |
 | `-p`, `--prompt-file` | 自定义提示词文件 | 内置文件 |
@@ -89,84 +69,63 @@ python main.py [选项]
 
 ### 交互控制
 
-- **输入提交**：
-  - Linux: 输入完成后按 `Ctrl+D`
-  - Windows: 输入完成后按 `Ctrl+Z` 然后按 `Enter`
-
-- **退出程序**：
-  - 输入 `exit`、`quit` 或 `q`
-  - 按 `Ctrl+C` 强制退出
-
-- **保存对话**：
-  - 输入 `save` 或 `s` 保存当前对话至 `saved_chats` 文件夹下（默认不保存）
-
-- **清空输入**：
-  - 输入 `clear` 或 `c` 清空当前输入内容
+- **提交输入**：Linux按`Ctrl+D`，Windows按`Ctrl+Z`然后按`Enter`
+- **退出程序**：输入`exit`、`quit`或`q`，或按`Ctrl+C`
+- **保存对话**：输入`save`或`s`保存至`saved_chats`文件夹
+- **清空输入**：输入`clear`或`c`
 
 ### 使用示例
 
-1. 使用默认模型简单聊天：
-   ```bash
-   python main.py
-   ```
+```bash
+# 使用推理模型分析文档
+python main_linux.py -m r1 -f document.txt
 
-2. 使用推理模型并上传文件：
-   ```bash
-   python main.py -m r1 -f document.txt
-   ```
+# 使用视觉模型分析图片
+python main_windows.py -i photo.jpg
 
-3. 分析图片内容：
-   ```bash
-   python main.py -i photo.jpg
-   ```
+# 加载之前对话并继续
+python main_linux.py -l saved_chats/chat_20250901_123456_discussion.json
+```
 
-4. 自定义温度和提示：
-   ```bash
-   python main.py -t 0.8 -p custom_prompt.md
-   ```
+## 项目结构
 
-5. 继续之前对话：
-   ```bash
-   python main.py -l saved_chats/chat_20250901_223022_discussion.json
-   ```
-
-## 版本说明
-
-- **main_linux.py**:
-  - 适配Linux系统
-  - 输入多行内容后按`Ctrl+D`提交
-
-- **main_indows.py**:
-  - 适配Windows系统
-  - 输入多行内容后按`Ctrl+Z`然后按`Enter`提交
+```
+.
+├── chat_session.py      # 核心共享模块（ChatSession类）
+├── main_linux.py        # Linux版本主程序
+├── main_windows.py      # Windows版本主程序
+├── config.json          # 配置文件
+├── prompts/             # 提示词文件夹
+│   ├── ecnu-v3.md       # ecnu-max模型提示词
+│   └── ecnu-r1.md       # ecnu-reasoner模型提示词
+└── saved_chats/         # 对话保存目录
+    └── chat_*.json      # 保存的对话文件
+```
 
 ## 模型说明
 
-1. **ecnu-max (v3)**:
-   - 默认模型
-   - 默认温度: 0.3
+- **ecnu-max (v3)**: 默认通用模型，温度0.3
+- **ecnu-reasoner (r1)**: 推理增强模型，显示思考过程，温度0.6
+- **ecnu-vl (vl)**: 多模态视觉模型，温度0.01，上传图片时自动启用
 
-2. **ecnu-reasoner (r1)**:
-   - 会显示推理过程
-   - 默认温度: 0.6
-   - 输出包含"Think"和"Answer"部分
+## 技术架构
 
-3. **ecnu-vl (vl)**:
-   - 多模态模型
-   - 默认温度: 0.01
-   - 使用`-i`参数时强制使用该模型
+项目采用模块化设计，将95%的通用功能集中在`chat_session.py`中：
+
+- **核心模块**：配置管理、API调用、文件处理、对话管理、错误处理
+- **平台适配**：Linux使用readline支持历史命令，Windows内置ANSI颜色支持
+
+这种设计提高了代码复用性，便于维护和扩展。
 
 ## 注意事项
 
-1. 确保`.env`文件中配置了正确的API密钥
-2. 程序所在目录要有`config.json`, `ecnu-v3.md`和`ecnu-r1.md`文件
-3. `-f`上传的文件必须是UTF-8编码的文本文件
-4. 大温度值可能导致输出更加随机
-5. 大图像文件模型可能无法处理
+- 确保`.env`文件配置正确的API密钥
+- `config.json`和提示词文件必须存在
+- 上传的文本文件需为UTF-8编码
+- 大温度值会增加输出随机性
+- 过大图像文件可能无法处理
 
-## 附录
-
-### 配置文件
+## 配置文件示例
 
 ```json
 {
@@ -182,23 +141,12 @@ python main.py [选项]
     "ecnu-vl": 0.01,
     "default": 0.3
   },
-  "prompt_defaults": {
-    "ecnu-reasoner": "ecnu-r1.md",
-    "default": "ecnu-v3.md"
-  },
   "colors": {
     "user": "32",
-    "program": "36",
     "assistant": "34",
     "reasoning": "33"
-  },
-  "paths": {
-    "saved_chats_dir": "saved_chats",
-    "prompts_dir": "prompts"
   }
 }
 ```
 
-修改`config["model_name"]["default"]`的值可以指定默认使用的模型，config.json文件中该参数的值是`ecnu-max`，意味着运行`python main.py`默认使用`ecnu-max`模型，如果修改为`ecnu-reasoner`，则默认使用`ecnu-reasoner`模型。
-
-`config["temperature_defaults"]`和`config["prompt_defaults"]`是模型的预设参数，例如`ecnu-reasoner`的预设温度为`0.6`，预设提示词为`ecnu-r1.md`文件。
+配置文件中可修改默认模型、温度参数和颜色设置。
