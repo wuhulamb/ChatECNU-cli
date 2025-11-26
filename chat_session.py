@@ -122,6 +122,31 @@ class ChatSession:
         else:
             return content  # Assume it's a string
 
+    def _generate_silent_response(self, client):
+        """Generate assistant response without streaming output (for non-interactive mode)."""
+        try:
+            # Use non-streaming API call to get complete response
+            response = client.chat.completions.create(
+                model=self.model,
+                messages=self.messages,
+                stream=False,
+                temperature=self.temperature,
+            )
+
+            response_content = response.choices[0].message.content
+
+            return response_content
+
+        except ConnectionError as e:
+            print(f"\n\033[1;31m[NETWORK] Connection failed: {str(e)}\033[0m")
+            return None
+        except TimeoutError as e:
+            print(f"\n\033[1;31m[TIMEOUT] Request timed out: {str(e)}\033[0m")
+            return None
+        except Exception as e:
+            print(f"\n\033[1;31m[API] Error occurred: {str(e)}\033[0m")
+            return None
+
     def add_user_message(self, content):
         """Add user message to conversation history"""
         if not content or not isinstance(content, str):
@@ -375,8 +400,26 @@ class ChatSession:
             print(f"\033[1;31m[LOAD] Error loading conversation: {str(e)}\033[0m")
             return False
 
-    def start(self, client, input_handler):
+    def start(self, client, input_handler, non_interactive_input=None):
         """Start the chat session with platform-specific input handling."""
+
+        # Check if we're in non-interactive mode
+        if non_interactive_input:
+            # Non-interactive mode: process the input and return response
+            try:
+                self.add_user_message(non_interactive_input)
+
+                # Generate response without streaming output (silent mode)
+                response = self._generate_silent_response(client)
+                if response:
+                    print(response)
+                else:
+                    print("\033[1;31m[ERROR] Failed to generate response\033[0m")
+            except Exception as e:
+                print(f"\033[1;31m[ERROR] {str(e)}\033[0m")
+            return
+
+        # Interactive mode (original code)
         print(f"\033[1;{self.program_color}mECNU Chat Client\033[0m\n")
         print(f"\033[1;{self.program_color}mModel: {self.model} | Temperature: {self.temperature}\033[0m")
         print(f"\033[1;{self.program_color}m(Type 'q' to quit, 's' to save conversation, 'c' to clear input)\033[0m")
@@ -471,4 +514,9 @@ def get_common_parser():
                       help="Paths to image files for vision model interaction (multiple files allowed)")
     parser.add_argument('-l', '--load-chat', default=None,
                       help="Path to a saved chat JSON file to load and continue conversation")
+
+    # Add non-interactive mode support
+    parser.add_argument('-P', '--print', default=None,
+                      help="Input text for non-interactive mode (if provided, program will process and exit)")
+
     return parser

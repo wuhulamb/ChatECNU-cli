@@ -59,8 +59,13 @@ def linux_main():
         script_dir=script_dir
     )
 
-    # Start session with Linux-specific input handler
-    session.start(client, linux_input_handler)
+    # Check if we're in non-interactive mode
+    if args.print:
+        # Non-interactive mode - no need for input handler
+        session.start(client, lambda: None, non_interactive_input=args.print)
+    else:
+        # Interactive mode
+        session.start(client, linux_input_handler)
 
 if __name__ == "__main__":
     linux_main()
