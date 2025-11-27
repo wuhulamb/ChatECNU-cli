@@ -10,9 +10,15 @@ import datetime
 import json
 import os
 import re
+import sys
 
 from dotenv import load_dotenv
 from openai import OpenAI
+
+
+def print_error(message):
+    """Print error message to stderr with proper formatting."""
+    print(message, file=sys.stderr)
 
 
 class ChatSession:
@@ -58,13 +64,13 @@ class ChatSession:
             with open(config_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         except FileNotFoundError:
-            print(f"\033[1;31m[CONFIG] Configuration file not found: {config_path}\033[0m")
+            print_error(f"\033[1;31m[CONFIG] Configuration file not found: {config_path}\033[0m")
             exit(1)
         except json.JSONDecodeError:
-            print(f"\033[1;31m[CONFIG] Invalid JSON format in config file\033[0m")
+            print_error(f"\033[1;31m[CONFIG] Invalid JSON format in config file\033[0m")
             exit(1)
         except Exception as e:
-            print(f"\033[1;31m[CONFIG] Error loading config: {str(e)}\033[0m")
+            print_error(f"\033[1;31m[CONFIG] Error loading config: {str(e)}\033[0m")
             exit(1)
 
     def _get_model_name(self, model_flag):
@@ -101,7 +107,7 @@ class ChatSession:
                     raise ValueError("Prompt file is empty")
             return content
         except Exception as e:
-            print(f"\033[1;31m[LOAD] Failed to load prompt: {str(e)}\033[0m")
+            print_error(f"\033[1;31m[LOAD] Failed to load prompt: {str(e)}\033[0m")
             raise
 
     def _has_image_content(self, content):
@@ -138,13 +144,13 @@ class ChatSession:
             return response_content
 
         except ConnectionError as e:
-            print(f"\n\033[1;31m[NETWORK] Connection failed: {str(e)}\033[0m")
+            print_error(f"\n\033[1;31m[NETWORK] Connection failed: {str(e)}\033[0m")
             return None
         except TimeoutError as e:
-            print(f"\n\033[1;31m[TIMEOUT] Request timed out: {str(e)}\033[0m")
+            print_error(f"\n\033[1;31m[TIMEOUT] Request timed out: {str(e)}\033[0m")
             return None
         except Exception as e:
-            print(f"\n\033[1;31m[API] Error occurred: {str(e)}\033[0m")
+            print_error(f"\n\033[1;31m[API] Error occurred: {str(e)}\033[0m")
             return None
 
     def add_user_message(self, content):
@@ -198,13 +204,13 @@ class ChatSession:
             return True
 
         except ConnectionError as e:
-            print(f"\n\033[1;31m[NETWORK] Connection failed: {str(e)}\033[0m")
+            print_error(f"\n\033[1;31m[NETWORK] Connection failed: {str(e)}\033[0m")
             return False
         except TimeoutError as e:
-            print(f"\n\033[1;31m[TIMEOUT] Request timed out: {str(e)}\033[0m")
+            print_error(f"\n\033[1;31m[TIMEOUT] Request timed out: {str(e)}\033[0m")
             return False
         except Exception as e:
-            print(f"\n\033[1;31m[API] Error occurred: {str(e)}\033[0m")
+            print_error(f"\n\033[1;31m[API] Error occurred: {str(e)}\033[0m")
             return False
 
     def generate_summary(self, client):
@@ -243,14 +249,14 @@ class ChatSession:
             return summary if summary else "conversation"
 
         except Exception as e:
-            print(f"\033[1;31m[SUMMARY] Failed to generate summary: {str(e)}\033[0m")
+            print_error(f"\033[1;31m[SUMMARY] Failed to generate summary: {str(e)}\033[0m")
             return None
 
     def add_file_contents(self, file_paths):
         """Add multiple file contents to conversation context"""
         for file_path in file_paths:
             if not os.path.exists(file_path):
-                print(f"\033[1;31m[FILE] File not found: {file_path}\033[0m")
+                print_error(f"\033[1;31m[FILE] File not found: {file_path}\033[0m")
                 return False
 
             try:
@@ -258,7 +264,7 @@ class ChatSession:
                     file_content = f.read()
 
                 if not file_content.strip():
-                    print(f"\033[1;31m[WARNING] Empty file: {file_path}\033[0m")
+                    print_error(f"\033[1;31m[WARNING] Empty file: {file_path}\033[0m")
                     continue
 
                 self.messages.append({
@@ -266,13 +272,13 @@ class ChatSession:
                     "content": f"User has uploaded a file '{os.path.basename(file_path)}'. Here is its content:\n{file_content}"
                 })
             except UnicodeDecodeError:
-                print(f"\033[1;31m[FILE] Not a UTF-8 encoded file: {file_path}\033[0m")
+                print_error(f"\033[1;31m[FILE] Not a UTF-8 encoded file: {file_path}\033[0m")
                 return False
             except PermissionError:
-                print(f"\033[1;31m[FILE] Permission denied: {file_path}\033[0m")
+                print_error(f"\033[1;31m[FILE] Permission denied: {file_path}\033[0m")
                 return False
             except Exception as e:
-                print(f"\033[1;31m[FILE] Error reading file {file_path}: {str(e)}\033[0m")
+                print_error(f"\033[1;31m[FILE] Error reading file {file_path}: {str(e)}\033[0m")
                 return False
 
         return True
@@ -281,7 +287,7 @@ class ChatSession:
         """Add multiple image contents to conversation context"""
         for image_path in image_paths:
             if not os.path.exists(image_path):
-                print(f"\033[1;31m[IMAGE] File not found: {image_path}\033[0m")
+                print_error(f"\033[1;31m[IMAGE] File not found: {image_path}\033[0m")
                 return False
 
             try:
@@ -302,10 +308,10 @@ class ChatSession:
                 })
 
             except PermissionError:
-                print(f"\033[1;31m[IMAGE] Permission denied: {image_path}\033[0m")
+                print_error(f"\033[1;31m[IMAGE] Permission denied: {image_path}\033[0m")
                 return False
             except Exception as e:
-                print(f"\033[1;31m[IMAGE] Error processing image {image_path}: {str(e)}\033[0m")
+                print_error(f"\033[1;31m[IMAGE] Error processing image {image_path}: {str(e)}\033[0m")
                 return False
 
         return True
@@ -313,7 +319,7 @@ class ChatSession:
     def save_conversation(self, client):
         """Save the current conversation history and session metadata to a JSON file."""
         if len(self.messages) <= 1:
-            print(f"\033[1;31m[SAVE] No conversation content to save (only system prompt exists).\033[0m")
+            print_error(f"\033[1;31m[SAVE] No conversation content to save (only system prompt exists).\033[0m")
             return False
 
         # Use saved_chats_dir from config
@@ -347,14 +353,14 @@ class ChatSession:
             print(f"\033[1;{self.program_color}m[SAVE] Conversation saved to {filepath}\033[0m")
             return True
         except Exception as e:
-            print(f"\033[1;31m[SAVE] Failed to save conversation: {str(e)}\033[0m")
+            print_error(f"\033[1;31m[SAVE] Failed to save conversation: {str(e)}\033[0m")
             return False
 
     def load_conversation(self, chat_file_path):
         """Load conversation history and session metadata from a JSON file."""
         try:
             if not os.path.exists(chat_file_path):
-                print(f"\033[1;31m[LOAD] Chat file not found: {chat_file_path}\033[0m")
+                print_error(f"\033[1;31m[LOAD] Chat file not found: {chat_file_path}\033[0m")
                 return False
 
             # Read and parse the JSON file
@@ -370,7 +376,7 @@ class ChatSession:
 
             # Validate the loaded messages structure
             if not isinstance(loaded_messages, list) or len(loaded_messages) == 0:
-                print(f"\033[1;31m[LOAD] Invalid chat file format\033[0m")
+                print_error(f"\033[1;31m[LOAD] Invalid chat file format\033[0m")
                 return False
 
             # Check if any message contains image content
@@ -394,10 +400,10 @@ class ChatSession:
             return True
 
         except json.JSONDecodeError:
-            print(f"\033[1;31m[LOAD] Invalid JSON format in chat file\033[0m")
+            print_error(f"\033[1;31m[LOAD] Invalid JSON format in chat file\033[0m")
             return False
         except Exception as e:
-            print(f"\033[1;31m[LOAD] Error loading conversation: {str(e)}\033[0m")
+            print_error(f"\033[1;31m[LOAD] Error loading conversation: {str(e)}\033[0m")
             return False
 
     def start(self, client, input_handler, non_interactive_input=None):
@@ -414,9 +420,9 @@ class ChatSession:
                 if response:
                     print(response)
                 else:
-                    print("\033[1;31m[ERROR] Failed to generate response\033[0m")
+                    print_error("\033[1;31m[ERROR] Failed to generate response\033[0m")
             except Exception as e:
-                print(f"\033[1;31m[ERROR] {str(e)}\033[0m")
+                print_error(f"\033[1;31m[ERROR] {str(e)}\033[0m")
             return
 
         # Interactive mode (original code)
@@ -454,15 +460,15 @@ class ChatSession:
                 try:
                     self.add_user_message(user_input)
                     if not self.generate_assistant_response(client):
-                        print("\033[1;31m[ERROR] Conversation error, please try again\033[0m")
+                        print_error("\033[1;31m[ERROR] Conversation error, please try again\033[0m")
                 except ValueError as e:
-                    print(f"\033[1;31m[INPUT] {str(e)}\033[0m")
+                    print_error(f"\033[1;31m[INPUT] {str(e)}\033[0m")
 
             except KeyboardInterrupt:
                 print(f"\033[1;{self.program_color}mSession terminated by Ctrl+C\033[0m")
                 break
             except Exception as e:
-                print(f"\033[1;31m[FATAL] Unexpected error: {str(e)}\033[0m")
+                print_error(f"\033[1;31m[FATAL] Unexpected error: {str(e)}\033[0m")
                 break
 
 
@@ -472,7 +478,7 @@ def load_env_file(script_dir):
     try:
         load_dotenv(dotenv_path=env_path)
     except Exception as e:
-        print(f"\033[1;31m[CRITICAL] Failed to load .env file: {str(e)}\033[0m")
+        print_error(f"\033[1;31m[CRITICAL] Failed to load .env file: {str(e)}\033[0m")
         exit(1)
 
 
@@ -483,7 +489,7 @@ def initialize_openai_client(script_dir):
     try:
         load_dotenv(dotenv_path=env_path)
     except Exception as e:
-        print(f"\033[1;31m[CRITICAL] Failed to load .env file: {str(e)}\033[0m")
+        print_error(f"\033[1;31m[CRITICAL] Failed to load .env file: {str(e)}\033[0m")
         exit(1)
 
     try:
@@ -495,7 +501,7 @@ def initialize_openai_client(script_dir):
             raise ValueError("API key not configured")
         return client
     except Exception as e:
-        print(f"\033[1;31m[INIT] {str(e)}\033[0m")
+        print_error(f"\033[1;31m[INIT] {str(e)}\033[0m")
         exit(1)
 
 
