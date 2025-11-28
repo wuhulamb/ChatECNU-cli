@@ -24,5 +24,16 @@
   "paths": {
     "saved_chats_dir": "saved_chats",
     "prompts_dir": "prompts"
+  },
+  "bash_commands_linux": {
+    "enabled": false,
+    "command_prefix": "!",
+    "allowed_commands": ["ls", "pwd", "cat", "grep", "find", "echo", "mkdir", "cd", "which", "date", "whoami", "uname", "df", "du", "wc", "head", "tail", "sleep"],
+    "dangerous_commands": ["rm", "dd", "chmod", "chown", "mv", "cp", "sudo", "su", "passwd", "useradd", "userdel", "shutdown", "reboot", "kill", "killall"],
+    "timeout_seconds": 30,
+    "max_output_length": 10000
+  },
+  "bash_commands_windows": {
+    "enabled": false
   }
 }

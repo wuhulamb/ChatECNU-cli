@@ -1,63 +1,51 @@
-# ECNU Chat Client
+# ChatECNU CLI
 
-跨平台命令行客户端，用于与华东师范大学AI聊天模型交互，支持文本和图像输入。
+跨平台命令行客户端，用于与华东师范大学AI聊天模型交互，支持文本和图像输入、系统命令执行等功能。
 
-## 功能特性
+## 🚀 功能特性
 
-- **跨平台支持**：提供Linux和Windows两个版本
-- **多模型选择**：
-  - `ecnu-max` (v3): 默认通用模型，温度默认0.3
-  - `ecnu-reasoner` (r1): 推理增强模型（显示思考过程），温度默认0.6
+- **统一跨平台架构**：单一入口`main.py`自动适配Linux/Windows平台
+- **多模型支持**：
+  - `ecnu-max` (v3): 默认通用模型，温度0.3
+  - `ecnu-reasoner` (r1): 推理增强模型（显示思考过程），温度0.6
   - `ecnu-vl` (vl): 多模态视觉模型，自动启用（使用`-i`参数时）
 - **运行模式**：
-  - **交互模式**：多轮对话模式
-  - **非交互模式**：单次输入直接输出结果，便于脚本集成
-- **交互功能**：
-  - 交互式对话界面
-  - 可调节温度参数
-  - 自定义系统提示词
-  - 文件上传与解析（文本文件）
+  - **交互模式**：多轮对话体验
+  - **非交互模式**：`-P`参数支持脚本化使用
+- **增强功能**：
+  - 文件上传与内容分析（文本文件）
   - 图片内容理解（JPEG等格式）
+  - **安全命令执行**：支持bash命令执行（需启用）
   - 对话历史保存与加载
   - 自动生成对话摘要作为文件名
-- **终端优化**：
-  - 彩色输出（支持Windows ANSI颜色）
-  - 流式响应显示
-  - 多行输入支持
 
-## 系统要求
+## 📋 系统要求
 
 - Python 3.7+
-- 依赖包：`openai`、`python-dotenv`
+- 必需依赖包：`openai`、`python-dotenv`
 - 操作系统：Windows 10+ 或 Linux
-- 有效的API密钥（需配置在.env文件中）
+- 有效的ECNU API密钥（需配置在.env文件中）
 
-## 快速开始
+## ⚡ 快速开始
 
-1. **安装依赖**：
-   ```bash
-   pip install openai python-dotenv
-   ```
+### 1. 安装依赖
+```bash
+pip install openai python-dotenv
+```
 
-2. **配置环境**：
-   - 创建`.env`文件并添加API密钥：
-     ```
-     CHATECNU_API_KEY=your_api_key_here
-     ```
-   - 确保项目包含必要的配置文件：
-     - `config.json` - 模型配置（必须）
-     - `prompts/`文件夹 - 包含`ecnu-v3.md`和`ecnu-r1.md`提示词文件（必须）
+### 2. 配置环境
+创建`.env`文件并添加API密钥：
+```bash
+CHATECNU_API_KEY=your_api_key_here
+```
 
-3. **启动客户端**：
-   ```bash
-   # Linux
-   python main_linux.py
+### 3. 启动客户端
+```bash
+# 所有平台统一命令
+python main.py
+```
 
-   # Windows
-   python main_windows.py
-   ```
-
-## 使用方法
+## 🎯 使用方法
 
 ### 命令行选项
 
@@ -74,85 +62,102 @@
 ### 交互控制
 
 - **提交输入**：Linux按`Ctrl+D`，Windows按`Ctrl+Z`然后按`Enter`
-- **退出程序**：输入`exit`、`quit`或`q`，或按`Ctrl+C`
-- **保存对话**：输入`save`或`s`保存至`saved_chats`文件夹
-- **清空输入**：输入`clear`或`c`
+- **退出程序**：输入`q`，或按`Ctrl+C`
+- **保存对话**：输入`s`保存至`saved_chats`文件夹
+- **清空输入**：输入或`c`
+- **命令模式**：输入`bash on`启用，`bash off`禁用
 
-### 使用示例
+## 💡 使用示例
 
-### 非交互模式
-
-支持直接通过命令行参数提供输入，程序处理完成后立即退出，输出仅为AI的回答内容。
+### 非交互模式（脚本友好）
 
 ```bash
-# 基本用法：直接提供问题
-python main_linux.py -P "帮我解释一下人工智能的基本概念"
+# 基础用法：直接提问
+python main.py -P "帮我解释一下人工智能的基本概念"
 
-# 结合其他选项：使用特定模型
-python main_windows.py -m r1 -P "请推理解决这个问题..."
+# 使用推理模型
+python main.py -m r1 -P "请推理解决这个数学问题..."
 
-# 结合文件上传：分析文档内容
-python main_linux.py -f document.txt -P "总结这个文档的主要观点"
+# 分析文档内容
+python main.py -f document.txt -P "总结这个文档的主要观点"
 
-# 结合图片分析
-python main_windows.py -i photo.jpg -P "描述图片中的内容"
+# 图片内容分析
+python main.py -i photo.jpg -P "描述图片中的内容"
 
-# 加载历史对话并提问
-python main_linux.py -l saved_chats/chat_20250901_123456.json -P "继续刚才的话题"
+# 继续历史对话
+python main.py -l saved_chats/chat_20250901_123456.json -P "继续刚才的话题"
 ```
 
 ### 交互模式
 
 ```bash
 # 使用推理模型分析文档
-python main_linux.py -m r1 -f document.txt
+python main.py -m r1 -f document.txt
 
 # 使用视觉模型分析图片
-python main_windows.py -i photo.jpg
+python main.py -i photo.jpg
 
-# 加载之前对话并继续
-python main_linux.py -l saved_chats/chat_20250901_123456_discussion.json
+# 启用命令执行模式
+python main.py
+# 然后在对话中输入：bash on
 ```
 
-## 项目结构
+### 命令执行功能
+
+启用bash命令模式后，可以：
+
+1. **直接执行命令**：输入`!ls`、`!pwd`等
+2. **AI推荐命令**：询问AI生成命令建议，选择执行
+3. **安全验证**：自动阻止危险命令，需要用户确认
+
+```bash
+# 启用命令模式
+bash on
+
+# 执行系统命令（带确认）
+!ls -la
+!cat README.md
+!find . -name "*.py"
+```
+
+## 🏗️ 项目架构
+
+重构后的统一架构大幅提升了代码复用性和维护性：
+
+### 核心模块
+
+- **`main.py`**：统一入口，自动平台检测和处理器选择
+- **`chat_session.py`**：核心会话管理（95%代码复用）
+- **`command_processor.py`**：安全命令执行系统
+- **`platform_handlers/`**：平台特定输入处理
+  - `linux.py`：Linux处理器（readline支持）
+  - `windows.py`：Windows处理器（ANSI颜色支持）
+  - `common.py`：通用处理器
+
+### 项目结构
 
 ```
-.
-├── chat_session.py      # 核心共享模块（ChatSession类）
-├── main_linux.py        # Linux版本主程序
-├── main_windows.py      # Windows版本主程序
-├── config.json          # 配置文件
-├── prompts/             # 提示词文件夹
-│   ├── ecnu-v3.md       # ecnu-max模型提示词
-│   └── ecnu-r1.md       # ecnu-reasoner模型提示词
-└── saved_chats/         # 对话保存目录
-    └── chat_*.json      # 保存的对话文件
+ChatECNU-cli/
+├── main.py                 # 统一入口点
+├── chat_session.py         # 核心会话管理
+├── command_processor.py    # 命令执行系统
+├── config.py               # 配置管理
+├── config.json             # 配置文件
+├── platform_handlers/      # 平台处理器
+│   ├── linux.py
+│   ├── windows.py
+│   └── common.py
+├── prompts/                # 提示词模板
+│   ├── ecnu-v3.md
+│   ├── ecnu-r1.md
+│   └── ecnu-bash.md
+└── saved_chats/            # 对话保存目录
+    └── chat_*.json
 ```
 
-## 模型说明
+## 🔧 配置说明
 
-- **ecnu-max (v3)**: 默认通用模型，温度0.3
-- **ecnu-reasoner (r1)**: 推理增强模型，显示思考过程，温度0.6
-- **ecnu-vl (vl)**: 多模态视觉模型，温度0.01，上传图片时自动启用
-
-## 技术架构
-
-项目采用模块化设计，将95%的通用功能集中在`chat_session.py`中：
-
-- **核心模块**：配置管理、API调用、文件处理、对话管理、错误处理
-- **平台适配**：Linux使用readline支持历史命令，Windows内置ANSI颜色支持
-
-这种设计提高了代码复用性，便于维护和扩展。
-
-## 注意事项
-
-- 确保`.env`文件配置正确的API密钥
-- `config.json`和提示词文件必须存在
-- 上传的文本文件需为UTF-8编码
-- 大温度值会增加输出随机性
-- 过大图像文件可能无法处理
-
-## 配置文件示例
+### 模型配置
 
 ```json
 {
@@ -167,13 +172,61 @@ python main_linux.py -l saved_chats/chat_20250901_123456_discussion.json
     "ecnu-max": 0.3,
     "ecnu-vl": 0.01,
     "default": 0.3
-  },
-  "colors": {
-    "user": "32",
-    "assistant": "34",
-    "reasoning": "33"
   }
 }
 ```
 
-配置文件中可修改默认模型、温度参数和颜色设置。
+### 命令执行安全配置（Linux）
+
+```json
+"bash_commands_linux": {
+  "enabled": false,
+  "command_prefix": "!",
+  "allowed_commands": ["ls", "pwd", "cat", "grep", "find", "echo", "mkdir", "cd"],
+  "dangerous_commands": ["rm", "dd", "chmod", "chown", "mv", "cp", "sudo"],
+  "timeout_seconds": 30,
+  "max_output_length": 10000,
+  "require_confirmation": true
+}
+```
+
+## 🌟 高级功能
+
+### 自动模型切换
+- 上传图片时自动启用视觉模型
+- 加载含图像的对话时自动适配模型
+
+### 智能提示词切换
+- 启用命令模式时自动使用`ecnu-bash.md`专用提示词
+- 支持运行时动态切换系统提示词
+
+### 对话持久化
+- JSON格式保存完整对话历史
+- 自动生成描述性文件名
+- 支持加载和继续任意历史对话
+
+## 📝 注意事项
+
+- 确保`.env`文件配置正确的API密钥
+- `config.json`和提示词文件必须存在
+- 上传的文本文件需为UTF-8编码
+- 大温度值会增加输出随机性
+- 过大图像文件可能无法处理
+- 命令执行功能默认禁用，需手动启用
+
+## 🔄 版本历史
+
+### v2.0 (重构版本)
+- ✅ 统一架构：单一入口代替平台特定文件
+- ✅ 增强命令执行：安全bash命令支持
+- ✅ 模块化设计：平台处理器分离
+- ✅ 非交互模式：脚本友好输出
+
+### v1.0 (初始版本)
+- 基础对话功能
+- 文件/图片上传
+- 双平台独立入口
+
+---
+
+**ChatECNU CLI** - 让AI交互更简单、更安全、更强大！

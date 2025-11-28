@@ -24,7 +24,7 @@ def print_error(message):
 class ChatSession:
     """Core chat session management for ECNU AI chat models."""
 
-    def __init__(self, model, temperature, system_prompt, file_paths, image_paths, load_chat_file, script_dir):
+    def __init__(self, model, temperature, system_prompt, file_paths, image_paths, load_chat_file, script_dir, command_processor=None):
         # Load configuration
         self.config = self.load_config(script_dir)
         self.script_dir = script_dir
@@ -41,9 +41,18 @@ class ChatSession:
         self.model = self._get_model_name(model)
         self.temperature = self._get_model_temp(temperature)
         self.system_prompt = self._get_system_prompt(system_prompt)
+        # Store the original system prompt for saving conversations
+        self.original_system_prompt = self.system_prompt
         self.file_paths = file_paths
         self.image_paths = image_paths
         self.load_chat_file = load_chat_file
+        # Update command processor with the actual configuration if provided
+        self.command_processor = command_processor
+        if self.command_processor:
+            # Update the command processor with the actual loaded configuration
+            self.command_processor.config = self.config
+            self.command_processor.bash_config = self.config.get("bash_commands", {})
+            self.command_processor.enabled = self.command_processor.bash_config.get("enabled", False)
 
         self.messages = [{"role": "system", "content": self.system_prompt}]
 
@@ -58,13 +67,12 @@ class ChatSession:
             raise ValueError("Failed to process one or more images")
 
     def load_config(self, script_dir):
-        """Load configuration from config.json"""
-        config_path = os.path.join(script_dir, "config.json")
+        """Load configuration using simplified config loader."""
         try:
-            with open(config_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
+            from config import load_config
+            return load_config(script_dir)
         except FileNotFoundError:
-            print_error(f"\033[1;31m[CONFIG] Configuration file not found: {config_path}\033[0m")
+            print_error(f"\033[1;31m[CONFIG] Configuration file not found\033[0m")
             exit(1)
         except json.JSONDecodeError:
             print_error(f"\033[1;31m[CONFIG] Invalid JSON format in config file\033[0m")
@@ -100,6 +108,13 @@ class ChatSession:
             default_file = prompt_mapping.get(self.model, self.config["prompt_defaults"]["default"])
             prompt_path = os.path.join(self.script_dir, prompts_dir, default_file)
 
+            # If bash mode is enabled, use the bash-specific prompt
+            bash_enabled = self.config.get("bash_commands", {}).get("enabled", False)
+            if bash_enabled:
+                bash_prompt_path = os.path.join(self.script_dir, prompts_dir, "ecnu-bash.md")
+                if os.path.exists(bash_prompt_path):
+                    prompt_path = bash_prompt_path
+
         try:
             with open(prompt_path, "r", encoding='utf-8') as f:
                 content = f.read()
@@ -109,6 +124,21 @@ class ChatSession:
         except Exception as e:
             print_error(f"\033[1;31m[LOAD] Failed to load prompt: {str(e)}\033[0m")
             raise
+
+    def _reload_system_prompt(self):
+        """Reload system prompt based on current configuration."""
+        try:
+            new_system_prompt = self._get_system_prompt(None)  # 使用当前配置重新加载
+
+            # 更新系统提示词
+            self.system_prompt = new_system_prompt
+
+            # 更新消息列表中的系统消息（如果有）
+            if self.messages and self.messages[0]["role"] == "system":
+                self.messages[0]["content"] = new_system_prompt
+
+        except Exception as e:
+            print_error(f"\033[1;31m[PROMPT] Failed to reload system prompt: {str(e)}\033[0m")
 
     def _has_image_content(self, content):
         """Check if the message content contains any image content."""
@@ -128,7 +158,7 @@ class ChatSession:
         else:
             return content  # Assume it's a string
 
-    def _generate_silent_response(self, client):
+    def generate_silent_response(self, client):
         """Generate assistant response without streaming output (for non-interactive mode)."""
         try:
             # Use non-streaming API call to get complete response
@@ -341,7 +371,7 @@ class ChatSession:
             "metadata": {
                 "model": self.model,
                 "temperature": self.temperature,
-                "system_prompt": self.system_prompt,
+                "system_prompt": self.original_system_prompt,  # Use original prompt, not current one
                 "saved_at": datetime.datetime.now().isoformat()
             },
             "messages": self.messages[1:]
@@ -416,7 +446,7 @@ class ChatSession:
                 self.add_user_message(non_interactive_input)
 
                 # Generate response without streaming output (silent mode)
-                response = self._generate_silent_response(client)
+                response = self.generate_silent_response(client)
                 if response:
                     print(response)
                 else:
@@ -427,8 +457,17 @@ class ChatSession:
 
         # Interactive mode (original code)
         print(f"\033[1;{self.program_color}mECNU Chat Client\033[0m\n")
-        print(f"\033[1;{self.program_color}mModel: {self.model} | Temperature: {self.temperature}\033[0m")
-        print(f"\033[1;{self.program_color}m(Type 'q' to quit, 's' to save conversation, 'c' to clear input)\033[0m")
+
+        # Show bash command mode status
+        bash_enabled = self.config.get("bash_commands", {}).get("enabled", False)
+        if bash_enabled:
+            print(f"\033[1;{self.program_color}mModel: {self.model} | Temperature: {self.temperature} | Bash commands\033[0m \033[1;33menabled\033[0m")
+            # print(f"\033[1;{self.program_color}m(Bash commands enabled - use '!<command>' to execute)\033[0m")
+        else:
+            print(f"\033[1;{self.program_color}mModel: {self.model} | Temperature: {self.temperature} | Bash commands\033[0m \033[1;33mdisabled\033[0m")
+            # print(f"\033[1;{self.program_color}m(Bash commands disabled)\033[0m")
+
+        print(f"\033[1;{self.program_color}m(Type 'q' to quit, 's' to save, 'c' to clear, 'bash on/off' to toggle commands)\033[0m")
 
         if self.file_paths:
             print(f"\033[1;33m{len(self.file_paths)} file(s) have been loaded. You can now ask questions about them.\033[0m")
@@ -454,13 +493,37 @@ class ChatSession:
                 elif user_input.lower() in ['save', 's']:
                     self.save_conversation(client)
                     continue
+                elif user_input.lower() in ['bash on', 'bash enable']:
+                    if self.command_processor:
+                        self.command_processor.toggle_mode(True, self._reload_system_prompt)
+                    continue
+                elif user_input.lower() in ['bash off', 'bash disable']:
+                    if self.command_processor:
+                        self.command_processor.toggle_mode(False, self._reload_system_prompt)
+                    continue
+                elif self.command_processor and self.command_processor.is_command_input(user_input):
+                    # Handle direct bash command through command processor
+                    processed = self.command_processor.process_user_command(user_input, self.messages)
+                    if processed:
+                        continue
                 if not user_input:
                     continue
 
                 try:
                     self.add_user_message(user_input)
-                    if not self.generate_assistant_response(client):
+                    success = self.generate_assistant_response(client)
+                    if not success:
                         print_error("\033[1;31m[ERROR] Conversation error, please try again\033[0m")
+                    else:
+                        # Check if AI response contains bash commands using command processor
+                        if self.messages and self.messages[-1]["role"] == "assistant":
+                            ai_response = self.messages[-1]["content"]
+                            if self.command_processor:
+                                # Use the unified process_ai_commands method from CommandProcessor
+                                processed = self.command_processor.process_ai_commands(ai_response, self.messages)
+                                if processed:
+                                    continue
+
                 except ValueError as e:
                     print_error(f"\033[1;31m[INPUT] {str(e)}\033[0m")
 
@@ -484,13 +547,8 @@ def load_env_file(script_dir):
 
 def initialize_openai_client(script_dir):
     """Initialize OpenAI client with ECNU configuration."""
-    # Load environment variables first
-    env_path = os.path.join(script_dir, ".env")
-    try:
-        load_dotenv(dotenv_path=env_path)
-    except Exception as e:
-        print_error(f"\033[1;31m[CRITICAL] Failed to load .env file: {str(e)}\033[0m")
-        exit(1)
+    # Load environment variables first using existing function
+    load_env_file(script_dir)
 
     try:
         client = OpenAI(
