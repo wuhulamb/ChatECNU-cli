@@ -14,14 +14,18 @@ from chat_session import ChatSession, initialize_openai_client, get_common_parse
 from command_processor import CommandProcessor
 
 def main():
+    # Get script directory (resolving symlinks for Linux)
+    if sys.platform.startswith('linux'):
+        script_dir = os.path.dirname(os.path.realpath(__file__))
+
     # Initialize Windows ANSI color support if running on Windows
     if sys.platform.startswith('win'):
         init_windows_ansi()
+        script_dir = os.path.dirname(os.path.abspath(__file__))
 
     parser = get_common_parser()
     args = parser.parse_args()
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
     client = initialize_openai_client(script_dir)
 
     command_processor = CommandProcessor(script_dir)
