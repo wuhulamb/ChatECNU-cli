@@ -20,7 +20,7 @@ def linux_input_handler(input_prompt="(Input text then press Ctrl+D to submit)")
 
             lines.append(line)
             if len(lines) == 1:
-                if line.strip() in ['q', 's', 'bash on', 'bash off'] or line.strip().startswith('!'):
+                if line.strip() in ['q', 's'] or line.strip().startswith('!'):
                     break
             if line.strip() in ['c']:
                 lines = []

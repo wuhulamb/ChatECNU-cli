@@ -19,7 +19,6 @@ class CommandProcessor:
         self.script_dir = script_dir
         self.config = {}
         self.bash_config = {}
-        self.enabled = False
 
         # Initialize default colors
         self.user_color = "32"
@@ -31,54 +30,6 @@ class CommandProcessor:
         """Check if input is a direct command (starts with '!')."""
         prefix = self.bash_config.get("command_prefix", "!")
         return input_text.strip().startswith(prefix)
-
-    def is_ai_generated_command(self, response_text):
-        """Check if AI response contains bash commands in special format."""
-        if not self.bash_config.get("enabled", False):
-            return []
-
-        # Look for commands between [BASH_COMMAND_START] and [BASH_COMMAND_END]
-        commands = []
-        pattern = r'\[BASH_COMMAND_START\](.*?)\[BASH_COMMAND_END\]'
-        matches = re.findall(pattern, response_text, re.DOTALL)
-
-        for match in matches:
-            # Extract each command line
-            for line in match.strip().split('\n'):
-                cmd = line.strip()
-                if cmd and not cmd.startswith('#') and cmd not in commands:
-                    commands.append(cmd)
-
-        return commands
-
-    def process_ai_commands(self, ai_response, messages):
-        """Process AI-generated commands and handle user selection."""
-        if not self.enabled:
-            return False
-
-        ai_commands = self.is_ai_generated_command(ai_response)
-        if not ai_commands:
-            return False
-
-        print(f"\033[1;{self.program_color}m[BASH] AI provided {len(ai_commands)} command suggestions\033[0m")
-        print(f"\033[1;{self.program_color}m[BASH] Please select a command to execute (enter number 1-{len(ai_commands)}, or 0 to skip): \033[0m")
-
-        for i, cmd in enumerate(ai_commands, 1):
-            print(f"\033[1;{self.program_color}mBash {i}: {cmd}\033[0m")
-
-        try:
-            choice = input("\033[1;32mChoice: \033[0m").strip()
-            if choice.isdigit() and 1 <= int(choice) <= len(ai_commands):
-                cmd = ai_commands[int(choice) - 1]
-                if self.validate_command_safety(cmd):
-                    result = self.execute_command(cmd)
-                    if result:
-                        self.add_command_result_to_messages(result, messages)
-                        return True
-        except (KeyboardInterrupt, EOFError):
-            print(f"\033[1;{self.program_color}m[BASH] Command execution skipped\033[0m")
-
-        return False
 
     def extract_command(self, input_text):
         """Extract the actual command from input (remove prefix)."""
@@ -98,12 +49,6 @@ class CommandProcessor:
         dangerous_commands = self.bash_config.get("dangerous_commands", [])
         if cmd_name in dangerous_commands:
             print(f"\033[1;31m[BASH] Dangerous command blocked: {cmd_name}\033[0m")
-            return False
-
-        # Check against allowed commands
-        allowed_commands = self.bash_config.get("allowed_commands", [])
-        if allowed_commands and cmd_name not in allowed_commands:
-            print(f"\033[1;31m[BASH] Command not in allowed list: {cmd_name}\033[0m")
             return False
 
         return True
@@ -205,24 +150,8 @@ class CommandProcessor:
             "content": bash_result_message
         })
 
-    def toggle_mode(self, enable, reload_callback=None):
-        """Enable or disable command execution mode."""
-        self.enabled = enable
-        self.bash_config["enabled"] = enable
-
-        status = "enabled" if enable else "disabled"
-        print(f"\033[1;{self.program_color}m[BASH] Command mode\033[0m \033[1;33m{status}\033[0m")
-
-        # 调用回调函数重载提示词
-        if reload_callback:
-            reload_callback()
-
     def process_user_command(self, user_input, messages):
         """Process a user command and update messages if executed."""
-        if not self.enabled:
-            print(f"\033[1;33m[WARN] Command detected but execution is currently disabled (use 'bash on' to enable)\033[0m")
-            return True
-
         command = self.extract_command(user_input)
         if self.validate_command_safety(command):
             # Execute command first (existing pre-execution confirmation still applies)
