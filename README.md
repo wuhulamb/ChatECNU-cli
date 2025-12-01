@@ -15,9 +15,9 @@
 - **增强功能**：
   - 文件上传与内容分析（文本文件）
   - 图片内容理解（JPEG等格式）
-  - **安全命令执行**：支持bash命令执行（需启用）
   - 对话历史保存与加载
   - 自动生成对话摘要作为文件名
+  - 命令执行
 
 ## 📋 系统要求
 
@@ -65,7 +65,6 @@ python main.py
 - **退出程序**：输入`q`，或按`Ctrl+C`
 - **保存对话**：输入`s`保存至`saved_chats`文件夹
 - **清空输入**：输入或`c`
-- **命令模式**：输入`bash on`启用，`bash off`禁用
 
 ## 💡 使用示例
 
@@ -96,25 +95,14 @@ python main.py -m r1 -f document.txt
 
 # 使用视觉模型分析图片
 python main.py -i photo.jpg
-
-# 启用命令执行模式
-python main.py
-# 然后在对话中输入：bash on
 ```
 
 ### 命令执行功能
 
-启用bash命令模式后，可以：
-
-1. **直接执行命令**：输入`!ls`、`!pwd`等
-2. **AI推荐命令**：询问AI生成命令建议，选择执行
-3. **安全验证**：自动阻止危险命令，需要用户确认
+**直接执行命令**：输入`!ls`、`!pwd`等
 
 ```bash
-# 启用命令模式
-bash on
-
-# 执行系统命令（带确认）
+# 执行系统命令
 !ls -la
 !cat README.md
 !find . -name "*.py"
@@ -149,8 +137,7 @@ ChatECNU-cli/
 │   └── common.py
 ├── prompts/                # 提示词模板
 │   ├── ecnu-v3.md
-│   ├── ecnu-r1.md
-│   └── ecnu-bash.md
+│   └── ecnu-r1.md
 └── saved_chats/            # 对话保存目录
     └── chat_*.json
 ```
@@ -180,13 +167,10 @@ ChatECNU-cli/
 
 ```json
 "bash_commands_linux": {
-  "enabled": false,
   "command_prefix": "!",
-  "allowed_commands": ["ls", "pwd", "cat", "grep", "find", "echo", "mkdir", "cd"],
   "dangerous_commands": ["rm", "dd", "chmod", "chown", "mv", "cp", "sudo"],
   "timeout_seconds": 30,
   "max_output_length": 10000,
-  "require_confirmation": true
 }
 ```
 
@@ -194,11 +178,6 @@ ChatECNU-cli/
 
 ### 自动模型切换
 - 上传图片时自动启用视觉模型
-- 加载含图像的对话时自动适配模型
-
-### 智能提示词切换
-- 启用命令模式时自动使用`ecnu-bash.md`专用提示词
-- 支持运行时动态切换系统提示词
 
 ### 对话持久化
 - JSON格式保存完整对话历史
@@ -218,7 +197,7 @@ ChatECNU-cli/
 
 ### v2.0 (重构版本)
 - ✅ 统一架构：单一入口代替平台特定文件
-- ✅ 增强命令执行：安全bash命令支持
+- ✅ 增强命令执行：bash命令支持
 - ✅ 模块化设计：平台处理器分离
 - ✅ 非交互模式：脚本友好输出
 
