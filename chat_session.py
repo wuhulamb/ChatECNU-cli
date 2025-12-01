@@ -262,7 +262,7 @@ class ChatSession:
 
                 self.messages.append({
                     "role": "user",
-                    "content": f"User has uploaded a file '{os.path.basename(file_path)}'. Here is its content:\n{file_content}"
+                    "content": f"User has uploaded a file '{file_path}'. Here is its content:\n{file_content}"
                 })
             except UnicodeDecodeError:
                 print_error(f"\033[1;31m[FILE] Not a UTF-8 encoded file: {file_path}\033[0m")
@@ -290,7 +290,7 @@ class ChatSession:
                 self.messages.append({
                     "role": "user",
                     "content": [
-                        {"type": "text", "text": f"User has uploaded an image '{os.path.basename(image_path)}', please remember its content."},
+                        {"type": "text", "text": f"User has uploaded an image '{image_path}', please remember its content."},
                         {
                             "type": "image_url",
                             "image_url": {
