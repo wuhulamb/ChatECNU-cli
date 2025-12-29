@@ -169,7 +169,7 @@ class ChatSession:
             reasoning_started = False
 
             for chunk in stream:
-                if "reasoner" in self.model and chunk.choices[0].delta.reasoning_content:
+                if "reasoner" in self.model and chunk.choices and chunk.choices[0].delta.reasoning_content:
                     reasoning_content = chunk.choices[0].delta.reasoning_content
 
                     # Add prefix and separator when reasoning content first appears
@@ -180,7 +180,7 @@ class ChatSession:
 
                     print(reasoning_content, end="", flush=True)
 
-                if chunk.choices[0].delta.content:
+                if chunk.choices and chunk.choices[0].delta.content:
                     content = chunk.choices[0].delta.content
 
                     # Add separator after reasoning
