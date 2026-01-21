@@ -1,47 +1,66 @@
-#!/usr/bin/env python3
 """Unified entry point for ChatECNU CLI with platform detection"""
 
 import sys
 import os
+import json
 
-# Platform detection and handler selection
-if sys.platform.startswith('linux'):
-    from platform_handlers.linux import linux_input_handler as platform_input_handler
-if sys.platform.startswith('win'):
-    from platform_handlers.windows import windows_input_handler as platform_input_handler, init_windows_ansi
-
-from chat_session import ChatSession, initialize_openai_client, get_common_parser
-from command_processor import CommandProcessor
+from chat import ChatSession
+from utils import load_config, initialize_openai_client, get_common_parser, print_conversation, print_error
 
 def main():
     # Get script directory (resolving symlinks for Linux)
     if sys.platform.startswith('linux'):
         script_dir = os.path.dirname(os.path.realpath(__file__))
-
-    # Initialize Windows ANSI color support if running on Windows
-    if sys.platform.startswith('win'):
-        init_windows_ansi()
+    else:
         script_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # Load configuration
+    config = load_config(script_dir)
+
+    # Platform detection and handler selection
+    if sys.platform.startswith('linux'):
+        from linux import linux_input_handler as platform_input_handler
+    elif sys.platform.startswith('win'):
+        from windows import windows_input_handler as platform_input_handler, init_windows_ansi
+        # Initialize Windows ANSI color support if running on Windows
+        init_windows_ansi()
 
     parser = get_common_parser()
     args = parser.parse_args()
 
-    client = initialize_openai_client(script_dir)
+    # Handle print-chat mode first
+    if args.print_chat:
+        print_conversation(args.print_chat, config)
+        return  # Exit after printing
 
-    command_processor = CommandProcessor(script_dir)
+    if args.model:
+        # Parse provider:model format
+        if ":" in args.model:
+            provider, model = args.model.split(":", 1)
+        else:
+            # If no provider specified, use default from config
+            provider = config.get("default_provider", "ecnu")
+            model = args.model
+    else:
+        provider = config.get("default_provider", "ecnu")
+        model = config.get("default_model", "ecnu-max")
+
+    client = initialize_openai_client(script_dir, provider, config)
+
     session = ChatSession(
-        model=args.model,
+        provider=provider,
+        model=model,
         temperature=args.temperature,
         system_prompt=args.prompt_file,
         file_paths=args.files,
         image_paths=args.images,
         load_chat_file=args.load_chat,
         script_dir=script_dir,
-        command_processor=command_processor
+        config=config  # Pass config directly
     )
 
-    if args.print:
-        session.start(client, lambda: None, non_interactive_input=args.print)
+    if args.silent:
+        session.start(client, lambda: None, non_interactive_input=args.silent)
     else:
         session.start(client, platform_input_handler)
 

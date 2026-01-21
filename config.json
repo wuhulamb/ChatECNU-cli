@@ -1,20 +1,48 @@
 {
-  "model_name": {
-    "v3": "ecnu-max",
-    "r1": "ecnu-reasoner",
-    "vl": "ecnu-vl",
-    "default": "ecnu-max"
+  "model_providers": {
+    "ecnu": {
+      "base_url": "https://chat.ecnu.edu.cn/open/api/v1",
+      "api_key_env": "CHATECNU_API_KEY",
+      "vision_model": "ecnu-vl",
+      "generate_summary_model": "ecnu-turbo",
+      "models": {
+        "ecnu-max": {
+          "prompt_defaults": "ecnu-v3.md",
+          "temperature_defaults": 0.3
+        },
+        "ecnu-reasoner": {
+          "prompt_defaults": "ecnu-r1.md",
+          "temperature_defaults": 0.6
+        },
+        "ecnu-vl": {
+          "prompt_defaults": "ecnu-v3.md",
+          "temperature_defaults": 0.01
+        },
+        "ecnu-turbo": {
+          "prompt_defaults": "ecnu-v3.md",
+          "temperature_defaults": 0.3
+        }
+      }
+    },
+    "deepseek": {
+      "base_url": "https://api.deepseek.com",
+      "api_key_env": "DEEPSEEK_API_KEY",
+      "models": {
+        "deepseek-chat": {
+          "prompt_defaults": "ecnu-v3.md",
+          "temperature_defaults": 0.3
+        },
+        "deepseek-reasoner": {
+          "prompt_defaults": "ecnu-r1.md",
+          "temperature_defaults": 0.6
+        }
+      }
+    }
   },
-  "temperature_defaults": {
-    "ecnu-reasoner": 0.6,
-    "ecnu-max": 0.3,
-    "ecnu-vl": 0.01,
-    "default": 0.3
-  },
-  "prompt_defaults": {
-    "ecnu-reasoner": "ecnu-r1.md",
-    "default": "ecnu-v3.md"
-  },
+
+  "default_provider": "ecnu",
+  "default_model": "ecnu-max",
+
   "colors": {
     "user": "32",
     "program": "36",
