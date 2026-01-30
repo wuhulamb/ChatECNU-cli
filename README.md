@@ -31,9 +31,18 @@
 
 ## ⚡ 快速开始
 
-### 1. 安装依赖
+### 1. 安装
 ```bash
+git clone git@github.com:wuhulamb/ChatECNU-cli.git
+cd ChatECNU-cli
 pip install openai python-dotenv
+```
+
+或者使用 [uv](https://github.com/astral-sh/uv)
+```bash
+git clone git@github.com:wuhulamb/ChatECNU-cli.git
+cd ChatECNU-cli
+uv sync
 ```
 
 ### 2. 配置环境
